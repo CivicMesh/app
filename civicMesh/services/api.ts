@@ -189,6 +189,7 @@ export function logout(): void {
 type PostForHelpData = {
   title: string;
   category: 'alert' | 'warning' | 'help' | 'resources' | 'accessibility resources';
+  subcategory?: string; // for finer-grained filtering
   description: string;
   latitude: number;
   longitude: number;
@@ -199,6 +200,7 @@ export type Post = {
   id: string;
   title: string;
   category: 'alert' | 'warning' | 'help' | 'resources' | 'accessibility resources';
+  subcategory?: string;
   description: string;
   latitude: number;
   longitude: number;
@@ -234,6 +236,7 @@ async function mockPostForHelp(postData: PostForHelpData): Promise<ApiResponse<P
     id: 'post-' + Date.now(),
     title: postData.title,
     category: postData.category,
+    subcategory: postData.subcategory,
     description: postData.description,
     latitude: postData.latitude,
     longitude: postData.longitude,

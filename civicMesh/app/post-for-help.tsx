@@ -10,9 +10,11 @@ import {
   Text,
   Alert,
   View,
+  BackHandler,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { GestureDetector, Gesture, Directions } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 // @ts-ignore - expo-location may not be installed
 import * as Location from 'expo-location';
 import { ThemedText } from '@/components/themed-text';
@@ -22,21 +24,15 @@ import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { usePosts } from '@/contexts/posts-context';
 import { postForHelp } from '@/services/api';
+import { CATEGORIES, Category, findCategory } from '@/constants/categories';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
-type Category = 'alert' | 'warning' | 'help' | 'resources' | 'accessibility resources';
-
-const CATEGORIES: { value: Category; label: string; icon: string }[] = [
-  { value: 'alert', label: 'Alert', icon: 'warning' },
-  { value: 'warning', label: 'Warning', icon: 'error' },
-  { value: 'help', label: 'Help', icon: 'help' },
-  { value: 'resources', label: 'Resources', icon: 'inventory' },
-  { value: 'accessibility resources', label: 'Accessibility Resources', icon: 'accessible' },
-];
+// Categories now come from constants with subcategories
 
 export default function PostForHelpScreen() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Category | null>(null);
+  const [subcategory, setSubcategory] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -47,25 +43,28 @@ export default function PostForHelpScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     requestLocationPermission();
   }, []);
 
+  // (moved to below handleBack) hardware back handling
+
   // Check if there are unsaved changes
-  const hasUnsavedChanges = () => {
-    return !!(title.trim() || category || description.trim());
-  };
+  const hasUnsavedChanges = useCallback(() => {
+    return !!(title.trim() || category || subcategory || description.trim());
+  }, [title, category, subcategory, description]);
 
   // Handle back navigation with confirmation dialog
   const handleBack = useCallback(() => {
     if (hasUnsavedChanges()) {
       Alert.alert(
-        'Discard Changes?',
-        'You have unsaved changes. Do you want to discard them and go back?',
+        'Discard changes?',
+        'You have unsaved edits. Discard and go back to Home?',
         [
           {
-            text: 'Continue Editing',
+            text: 'Stay',
             style: 'cancel',
           },
           {
@@ -78,14 +77,19 @@ export default function PostForHelpScreen() {
     } else {
       router.replace('/(tabs)');
     }
-  }, [title, category, description, router]);
+  }, [hasUnsavedChanges, router]);
 
-  // Swipe gesture handler
-  const swipeGesture = Gesture.Fling()
-    .direction(Directions.LEFT | Directions.RIGHT)
-    .onEnd(() => {
-      handleBack();
-    });
+  // Handle Android hardware back to go home with confirmation
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBack();
+        return true; // prevent default behavior
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => sub.remove();
+    }, [handleBack])
+  );
 
   const requestLocationPermission = async () => {
     try {
@@ -140,6 +144,11 @@ export default function PostForHelpScreen() {
       return;
     }
 
+    if (!subcategory) {
+      setError('Please select a subcategory');
+      return;
+    }
+
     if (!description.trim()) {
       setError('Please enter a description');
       return;
@@ -157,6 +166,7 @@ export default function PostForHelpScreen() {
       const result = await postForHelp({
         title: title.trim(),
         category,
+        subcategory,
         description: description.trim(),
         latitude: location.latitude,
         longitude: location.longitude,
@@ -183,23 +193,22 @@ export default function PostForHelpScreen() {
   };
 
   return (
-    <GestureDetector gesture={swipeGesture}>
-      <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBack}
-            accessibilityLabel="Go back"
-            accessibilityRole="button">
-            <MaterialIcons name="arrow-back" size={24} color={colors.icon} />
-          </TouchableOpacity>
-        </View>
-        <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={[styles.header, { paddingTop: insets.top, backgroundColor: colors.background, borderBottomColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={handleBack}
+          accessibilityLabel="Go back"
+          accessibilityRole="button">
+          <MaterialIcons name="arrow-back" size={24} color={colors.icon} />
+        </TouchableOpacity>
+      </View>
+      <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}>
         <ThemedView style={styles.content}>
           <ThemedText type="title" style={styles.title}>
             Post for Help
@@ -252,7 +261,10 @@ export default function PostForHelpScreen() {
                         borderColor: category === cat.value ? colors.tint : colorScheme === 'dark' ? '#444' : '#ddd',
                       },
                     ]}
-                    onPress={() => setCategory(cat.value)}
+                    onPress={() => {
+                      setCategory(cat.value);
+                      setSubcategory(null);
+                    }}
                     disabled={loading}>
                     <MaterialIcons
                       name={cat.icon as any}
@@ -272,6 +284,51 @@ export default function PostForHelpScreen() {
                 ))}
               </View>
             </ThemedView>
+
+            {/* Subcategory Field (depends on Category) */}
+            {category && (
+              <ThemedView style={styles.inputContainer}>
+                <ThemedText style={styles.label}>Subcategory *</ThemedText>
+                <View style={styles.categoryContainer}>
+                  {findCategory(category)?.subcategories.map((sub) => (
+                    <TouchableOpacity
+                      key={sub.id}
+                      style={[
+                        styles.categoryButton,
+                        {
+                          backgroundColor:
+                            subcategory === sub.id
+                              ? colors.tint
+                              : colorScheme === 'dark'
+                                ? '#2a2a2a'
+                                : '#f5f5f5',
+                          borderColor: subcategory === sub.id ? colors.tint : colorScheme === 'dark' ? '#444' : '#ddd',
+                        },
+                      ]}
+                      onPress={() => setSubcategory(sub.id)}
+                      disabled={loading}>
+                      <MaterialIcons
+                        name={
+                          // try to reuse same icon as category for now
+                          (CATEGORIES.find((c) => c.value === category)?.icon || 'label') as any
+                        }
+                        size={20}
+                        color={subcategory === sub.id ? (colorScheme === 'dark' ? '#000' : '#fff') : colors.text}
+                      />
+                      <Text
+                        style={[
+                          styles.categoryButtonText,
+                          {
+                            color: subcategory === sub.id ? (colorScheme === 'dark' ? '#000' : '#fff') : colors.text,
+                          },
+                        ]}>
+                        {sub.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ThemedView>
+            )}
 
             {/* Description Field */}
             <ThemedView style={styles.inputContainer}>
@@ -347,7 +404,6 @@ export default function PostForHelpScreen() {
         </ThemedView>
       </ScrollView>
     </KeyboardAvoidingView>
-    </GestureDetector>
   );
 }
 

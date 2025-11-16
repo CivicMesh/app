@@ -1,4 +1,5 @@
 import { StyleSheet, ScrollView, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -71,6 +72,13 @@ function FeedItem({ post }: { post: Post }) {
                 {post.category}
               </ThemedText>
             </View>
+            {post.subcategory ? (
+              <View style={[styles.categoryBadge, { backgroundColor: categoryColor + '10' }]}>
+                <ThemedText style={[styles.categoryBadgeText, { color: categoryColor }]}>
+                  {post.subcategory}
+                </ThemedText>
+              </View>
+            ) : null}
           </View>
           <ThemedText style={styles.feedItemMessage}>{post.description}</ThemedText>
           <ThemedText style={styles.feedItemTimestamp}>{formatTimestamp(post.timestamp || post.createdAt)}</ThemedText>
@@ -81,6 +89,7 @@ function FeedItem({ post }: { post: Post }) {
 }
 
 export function Feed() {
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { posts, isLoading } = usePosts();
@@ -88,7 +97,9 @@ export function Feed() {
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.header}>
-        <ThemedText type="subtitle">Active Feed</ThemedText>
+        <TouchableOpacity onPress={() => router.push('/active-feed')} accessibilityRole="button" accessibilityLabel="Open active feed">
+          <ThemedText type="subtitle">Active Feed</ThemedText>
+        </TouchableOpacity>
         <MaterialIcons name="notifications" size={24} color={colors.tint} />
       </ThemedView>
       <ScrollView

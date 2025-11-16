@@ -51,6 +51,8 @@ export default function RootLayout() {
               <Stack.Screen name="signup" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="post-for-help" options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen name="map" options={{ headerShown: false }} />
+              <Stack.Screen name="active-feed" options={{ headerShown: false }} />
               <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
             </Stack>
             <StatusBar style="auto" />
