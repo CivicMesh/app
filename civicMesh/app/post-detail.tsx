@@ -28,10 +28,21 @@ import { useAuth } from '@/contexts/auth-context';
 
 // Category colors now derived from semantic tokens in theme.
 function getCategoryColors(mode: 'light' | 'dark', category: Post['category']) {
+  const semanticColor = getCategorySemanticColor(mode, category);
+  const semanticBg = getCategorySemanticBg(mode, category);
+
+  if (mode === 'light' && semanticColor.toLowerCase() === '#0a7ea4') {
+    return {
+      fg: '#000000',
+      bg: 'rgba(0, 0, 0, 0.08)',
+      subtleBg: 'rgba(0, 0, 0, 0.08)',
+    };
+  }
+
   return {
-    fg: getCategorySemanticColor(mode, category),
-    bg: getCategorySemanticBg(mode, category),
-    subtleBg: getCategorySemanticBg(mode, category),
+    fg: semanticColor,
+    bg: semanticBg,
+    subtleBg: semanticBg,
   };
 }
 
@@ -56,13 +67,18 @@ function formatTimestamp(timestamp: string): string {
 
 export default function PostDetailScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string; from?: string }>();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const colors = Colors[scheme];
+  const accentBackground = scheme === 'light' ? '#000000' : colors.tint;
+  const accentContent = scheme === 'light' ? '#FFFFFF' : '#000000';
   const { posts, updatePost } = usePosts();
   const { user } = useAuth();
-  
+  const fromParam = Array.isArray(params.from) ? params.from[0] : params.from;
+  const cameFromMap = fromParam === 'map';
+
   const post = posts.find((p) => p.id === params.id);
 
   const [showResolveForm, setShowResolveForm] = useState(false);
@@ -77,12 +93,12 @@ export default function PostDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       const onBack = () => {
-        router.replace('/(tabs)');
+        router.replace(cameFromMap ? '/map' : '/(tabs)');
         return true;
       };
       const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
       return () => sub.remove();
-    }, [router])
+    }, [router, cameFromMap])
   );
 
   const handleOnMyWay = async () => {
@@ -288,7 +304,7 @@ export default function PostDetailScreen() {
         Alert.alert('Success', 'Post has been marked as resolved!', [
           {
             text: 'OK',
-            onPress: () => router.replace('/(tabs)'),
+            onPress: () => router.replace(cameFromMap ? '/map' : '/(tabs)'),
           },
         ]);
       } else {
@@ -306,7 +322,11 @@ export default function PostDetailScreen() {
     return (
       <ThemedView style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top, backgroundColor: colors.background, borderBottomColor: borderColor }]}>
-          <TouchableOpacity style={styles.headerButton} onPress={() => router.replace('/(tabs)')} accessibilityRole="button" accessibilityLabel="Go back">
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => router.replace(cameFromMap ? '/map' : '/(tabs)')}
+            accessibilityRole="button"
+            accessibilityLabel="Go back">
             <MaterialIcons name="arrow-back" size={24} color={colors.icon} />
           </TouchableOpacity>
           <ThemedText type="subtitle">Post Details</ThemedText>
@@ -320,12 +340,16 @@ export default function PostDetailScreen() {
     );
   }
 
-  const categoryColors = getCategoryColors(colorScheme === 'dark' ? 'dark' : 'light', post.category);
+  const categoryColors = getCategoryColors(scheme, post.category);
 
   return (
     <ThemedView style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top, backgroundColor: colors.background, borderBottomColor: borderColor }]}>
-        <TouchableOpacity style={styles.headerButton} onPress={() => router.replace('/(tabs)')} accessibilityRole="button" accessibilityLabel="Go back">
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => router.replace(cameFromMap ? '/map' : '/(tabs)')}
+          accessibilityRole="button"
+          accessibilityLabel="Go back">
           <MaterialIcons name="arrow-back" size={24} color={colors.icon} />
         </TouchableOpacity>
         <ThemedText type="subtitle">Post Details</ThemedText>
@@ -372,10 +396,10 @@ export default function PostDetailScreen() {
               </ThemedText>
             </View>
             <TouchableOpacity
-              style={[styles.mapsButton, { backgroundColor: colors.tint }]}
+              style={[styles.mapsButton, { backgroundColor: accentBackground }]}
               onPress={openInGoogleMaps}>
-              <MaterialIcons name="map" size={16} color={colorScheme === 'dark' ? '#000' : '#fff'} />
-              <Text style={[styles.mapsButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
+              <MaterialIcons name="map" size={16} color={accentContent} />
+              <Text style={[styles.mapsButtonText, { color: accentContent }]}> 
                 Open in Maps
               </Text>
             </TouchableOpacity>
@@ -386,7 +410,7 @@ export default function PostDetailScreen() {
           {/* Video if available */}
           {post.videoUri && (
             <View style={styles.videoContainer}>
-              <MaterialIcons name="videocam" size={48} color={colors.tint} />
+              <MaterialIcons name="videocam" size={48} color={accentBackground} />
               <ThemedText style={styles.videoText}>Video attached</ThemedText>
             </View>
           )}
@@ -395,10 +419,10 @@ export default function PostDetailScreen() {
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.tint }]}
+            style={[styles.actionButton, { backgroundColor: accentBackground }]}
             onPress={handleOnMyWay}>
-            <MaterialIcons name="directions-run" size={20} color={colorScheme === 'dark' ? '#000' : '#fff'} />
-            <Text style={[styles.actionButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
+            <MaterialIcons name="directions-run" size={20} color={accentContent} />
+            <Text style={[styles.actionButtonText, { color: accentContent }]}> 
               On My Way
             </Text>
           </TouchableOpacity>
@@ -445,22 +469,22 @@ export default function PostDetailScreen() {
                 <View style={styles.mediaPreviewContainer}>
                   <Image source={{ uri: resolutionPhotoUri }} style={styles.photoPreview} />
                   <TouchableOpacity
-                    style={[styles.changeMediaButton, { backgroundColor: colors.tint }]}
+                    style={[styles.changeMediaButton, { backgroundColor: accentBackground }]}
                     onPress={pickResolutionPhoto}
                     disabled={loading}>
-                    <MaterialIcons name="edit" size={16} color={colorScheme === 'dark' ? '#000' : '#fff'} />
-                    <Text style={[styles.changeMediaButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
+                    <MaterialIcons name="edit" size={16} color={accentContent} />
+                    <Text style={[styles.changeMediaButtonText, { color: accentContent }]}> 
                       Change Photo
                     </Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <TouchableOpacity
-                  style={[styles.mediaButton, { backgroundColor: colors.tint }]}
+                  style={[styles.mediaButton, { backgroundColor: accentBackground }]}
                   onPress={pickResolutionPhoto}
                   disabled={loading}>
-                  <MaterialIcons name="add-a-photo" size={20} color={colorScheme === 'dark' ? '#000' : '#fff'} />
-                  <Text style={[styles.mediaButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
+                  <MaterialIcons name="add-a-photo" size={20} color={accentContent} />
+                  <Text style={[styles.mediaButtonText, { color: accentContent }]}> 
                     Add Photo
                   </Text>
                 </TouchableOpacity>
@@ -473,15 +497,15 @@ export default function PostDetailScreen() {
               {resolutionVideoUri ? (
                 <View style={styles.mediaPreviewContainer}>
                   <View style={styles.videoPreview}>
-                    <MaterialIcons name="videocam" size={48} color={colors.tint} />
+                    <MaterialIcons name="videocam" size={48} color={accentBackground} />
                     <ThemedText style={styles.videoPreviewText}>Video selected</ThemedText>
                   </View>
                   <TouchableOpacity
-                    style={[styles.changeMediaButton, { backgroundColor: colors.tint }]}
+                    style={[styles.changeMediaButton, { backgroundColor: accentBackground }]}
                     onPress={pickResolutionVideo}
                     disabled={loading}>
-                    <MaterialIcons name="edit" size={16} color={colorScheme === 'dark' ? '#000' : '#fff'} />
-                    <Text style={[styles.changeMediaButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
+                    <MaterialIcons name="edit" size={16} color={accentContent} />
+                    <Text style={[styles.changeMediaButtonText, { color: accentContent }]}> 
                       Change Video
                     </Text>
                   </TouchableOpacity>

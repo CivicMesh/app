@@ -117,7 +117,7 @@ export function Feed({ hideHeader = false, showDescription = false }: FeedProps)
   const colors = Colors[colorScheme ?? 'light'];
   const { posts, isLoading } = usePosts();
   const { selectedCategories, selectedSubcategories, hasActiveFilters, clearFilters } = useFilters('feed');
-  const headerIconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
+  const headerIconColor = colors.tint;
 
   const filteredPosts = useMemo(() => {
     if (!hasActiveFilters) {

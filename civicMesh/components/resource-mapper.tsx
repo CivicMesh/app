@@ -130,7 +130,7 @@ export function ResourceMapper() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const mapIconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
+  const mapIconColor = colors.tint;
   const { posts } = usePosts();
   return (
     <ThemedView style={styles.container}>

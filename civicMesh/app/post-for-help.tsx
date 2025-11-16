@@ -46,10 +46,11 @@ export default function PostForHelpScreen() {
   const { addPost } = usePosts();
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  const iconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
-  const accentColor = colorScheme === 'dark' ? colors.tint : '#000000';
-  const accentForeground = colorScheme === 'dark' ? '#000000' : '#FFFFFF';
+  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const colors = Colors[scheme];
+  const iconColor = scheme === 'dark' ? '#FFFFFF' : '#000000';
+  const accentColor = scheme === 'dark' ? colors.tint : '#000000';
+  const accentForeground = scheme === 'dark' ? '#000000' : '#FFFFFF';
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -397,10 +398,10 @@ export default function PostForHelpScreen() {
                         backgroundColor:
                           category === cat.value
                             ? accentColor
-                            : colorScheme === 'dark'
+                            : scheme === 'dark'
                               ? '#2a2a2a'
                               : '#f5f5f5',
-                        borderColor: category === cat.value ? accentColor : colorScheme === 'dark' ? '#444' : '#ddd',
+                        borderColor: category === cat.value ? accentColor : scheme === 'dark' ? '#444' : '#ddd',
                       },
                     ]}
                     onPress={() => {
@@ -441,10 +442,10 @@ export default function PostForHelpScreen() {
                           backgroundColor:
                             subcategory === sub.id
                               ? accentColor
-                              : colorScheme === 'dark'
+                              : scheme === 'dark'
                                 ? '#2a2a2a'
                                 : '#f5f5f5',
-                          borderColor: subcategory === sub.id ? accentColor : colorScheme === 'dark' ? '#444' : '#ddd',
+                          borderColor: subcategory === sub.id ? accentColor : scheme === 'dark' ? '#444' : '#ddd',
                         },
                       ]}
                       onPress={() => setSubcategory(sub.id)}

@@ -21,9 +21,6 @@ export function MenuDrawer({ visible, onClose, onSignOut, userEmail, userName }:
   const colors = Colors[colorScheme ?? 'light'];
   const { colorScheme: appTheme, setTheme } = useThemePreference();
   const isDarkMode = appTheme === 'dark';
-  const interactiveIconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
-  const switchActiveTrack = '#000000';
-  const switchThumbColor = isDarkMode ? '#FFFFFF' : '#000000';
 
   return (
     <Modal
@@ -79,7 +76,7 @@ export function MenuDrawer({ visible, onClose, onSignOut, userEmail, userName }:
                   style={[styles.menuItem, { borderBottomColor: colorScheme === 'dark' ? colors.border : colors.borderMuted }]}
                   onPress={onSignOut}
                   activeOpacity={0.7}>
-                  <MaterialIcons name="logout" size={24} color={interactiveIconColor} />
+                  <MaterialIcons name="logout" size={24} color={colors.brand.primary} />
                   <ThemedText style={styles.menuItemText}>Sign Out</ThemedText>
                   <MaterialIcons name="chevron-right" size={20} color={colors.icon} />
                 </TouchableOpacity>
@@ -102,8 +99,8 @@ export function MenuDrawer({ visible, onClose, onSignOut, userEmail, userName }:
                 <Switch
                   value={isDarkMode}
                   onValueChange={(value) => setTheme(value ? 'dark' : 'light')}
-                  trackColor={{ false: colors.borderMuted, true: switchActiveTrack }}
-                  thumbColor={switchThumbColor}
+                  trackColor={{ false: colors.borderMuted, true: colors.tint }}
+                  thumbColor={isDarkMode ? colors.brand.primaryForeground : '#FFFFFF'}
                   ios_backgroundColor={colors.borderMuted}
                   accessibilityLabel="Toggle dark mode"
                 />

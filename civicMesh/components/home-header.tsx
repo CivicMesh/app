@@ -19,7 +19,7 @@ export function HomeHeader({
   const insets = useSafeAreaInsets();
   const colors = Colors[colorScheme ?? 'light'];
   const borderColor = colorScheme === 'dark' ? colors.border : colors.borderMuted;
-  const iconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
+  const iconColor = colors.tint;
 
   return (
     <View

@@ -10,6 +10,7 @@ import { MenuDrawer } from '@/components/menu-drawer';
 import { useAuth } from '@/contexts/auth-context';
 import { usePosts } from '@/contexts/posts-context';
 import { useLocation } from '@/contexts/location-context';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,7 +24,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
-  const fabIconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
+  const colors = Colors[colorScheme ?? 'light'];
 
   const handleMenuPress = () => {
     setMenuVisible(true);
@@ -87,7 +88,7 @@ export default function HomeScreen() {
         accessibilityLabel="Create a post"
         activeOpacity={0.85}
       >
-        <Ionicons name="add-circle" size={56} color={fabIconColor} />
+        <Ionicons name="add-circle" size={56} color={colors.tint} />
       </TouchableOpacity>
     </ThemedView>
   );
