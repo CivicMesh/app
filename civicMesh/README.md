@@ -1,6 +1,190 @@
-# Welcome to your Expo app 👋
+# CivicMesh Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+An Expo React Native application for community safety & assistance: users can post alerts, request help, share resources, mark that they're "On My Way", and resolve posts with media evidence.
+
+---
+## Quick Start
+
+```bash
+git clone <repo-url>
+cd civicMesh/app-1/civicMesh
+npm install
+npx expo start
+```
+
+Open in Expo Go, Android emulator, or iOS simulator from the interactive CLI.
+
+---
+## Environment Configuration
+
+The app supports a mock mode (local fixtures) and a live backend mode.
+
+Create or edit a `.env` file (already added) at project root:
+
+```
+EXPO_PUBLIC_API_URL=https://backend-51lr.onrender.com
+EXPO_PUBLIC_USE_MOCK_API=false
+```
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `EXPO_PUBLIC_API_URL` | Base URL for backend | `https://backend-51lr.onrender.com` |
+| `EXPO_PUBLIC_USE_MOCK_API` | Toggle mock data fixtures | `true` or `false` |
+
+Switch back to mock data quickly by setting `EXPO_PUBLIC_USE_MOCK_API=true` (no network calls; useful offline / UI prototyping).
+
+> After changing env values, restart Expo (`Ctrl+C` then `npx expo start`).
+
+---
+## Authentication
+
+Two forms are in play:
+
+1. **App Login / Signup** – Calls backend `/login/` (GET) and `/users/` (POST) with email & password. Backend returns a user id; we generate a session token client-side (since backend does not yet issue JWTs).
+2. **Protected Endpoints** – All other endpoints (posts, upload, resolve) require **HTTP Basic Auth** using static credentials for now:
+
+```
+Username: testuser
+Password: testpassword
+```
+
+The API client (`services/api.ts`) encodes these via Base64 and includes `Authorization: Basic …` for protected requests.
+
+> Production Recommendation: Replace static Basic Auth with issued tokens (JWT / opaque session) and never embed credentials in image URLs.
+
+---
+## Features Overview
+
+| Feature | Screen / Component | Notes |
+|---------|--------------------|-------|
+| View Active Posts | `app/(tabs)/index.tsx`, `feed.tsx` | Silent background refresh on tab focus for responsiveness |
+| Map Visualization | `app/map.tsx` | Centers user location; silent post refresh to reduce spinner time |
+| Post Detail | `app/post-detail.tsx` | Fetches latest snapshot; merges into existing state to avoid flicker |
+| Create Post | `app/post-for-help.tsx` | Local photo auto-upload; backend normalized to snake_case |
+| Mark On My Way | `markOnMyWay()` | Adds user id to `onMyWayBy` list |
+| Resolve Post | `resolvePost()` | Requires resolution code + photo (auto-upload before PUT) |
+| Auth Context | `contexts/auth-context.tsx` | Persists generated token + user in `AsyncStorage` |
+| Posts Context | `contexts/posts-context.tsx` | Global caching + silent refresh logic |
+| Location Context | `contexts/location-context.tsx` | Provides geolocation for map & post creation |
+
+---
+## Image Handling
+
+### Upload
+Endpoint: `POST /upload-image/{userId}?post_id={postId}` (multipart form with `file` field).
+
+Workflow:
+1. User selects local image (URI like `file:///...`).
+2. `uploadImage()` sends multipart form; backend responds with `{ image_id: <n> }` (or direct URL).
+3. Numeric IDs mapped to image URL; for now we embed Basic Auth credentials for RN `<Image>` (because headers cannot be sent directly by the Image component).
+
+### Download
+Endpoint: `GET /image/{id}` – returns binary image (e.g., JPEG). We currently generate image URLs like:
+```
+https://testuser:testpassword@backend-51lr.onrender.com/image/1
+```
+
+> Security Warning: Embedding credentials in URLs is **not** recommended for production (risks leaking via logs, proxies, or analytics). Replace with signed URLs or public CDN paths when upgrading.
+
+### Future Improvement Ideas
+- Switch to signed short-lived URLs
+- Async prefetch & caching (e.g., `expo-image` advanced options)
+- Placeholder shimmer while loading
+
+---
+## Data Model (Simplified)
+
+```
+Post {
+   id: string
+   title: string
+   category: 'alert' | 'warning' | 'help' | 'resources' | 'accessibility resources'
+   subcategory?: string
+   description: string (backend: body)
+   latitude: number
+   longitude: number
+   userId: string (backend: user_id)
+   photoUri: string (backend: image_url or resolved to GET /image/{id})
+   videoUri?: string (backend: video_url)
+   onMyWayBy?: string[] (backend: on_my_way_by)
+   resolvedBy?: string (backend: resolved_by)
+   resolutionCode?: string (backend: resolution_code)
+   is_active?: boolean
+   timestamp / createdAt
+}
+```
+
+Client ↔ backend normalization handled in `normalizePost()` and `buildPostPayload()`.
+
+---
+## Theming & Design Tokens
+Full token documentation retained below (original section). Semantic category colors accessible via:
+```ts
+getCategorySemanticColor(mode, category)
+getCategorySemanticBg(mode, category)
+```
+Used for badges, backgrounds, and foreground legibility.
+
+---
+## Development Workflow
+
+| Task | Command |
+|------|---------|
+| Start app | `npx expo start` |
+| Android build | `npm run android` |
+| iOS build | `npm run ios` |
+| Lint | `npm run lint` |
+| Reset starter template | `npm run reset-project` |
+
+### Mock vs Live API
+- Toggle via `EXPO_PUBLIC_USE_MOCK_API`.
+- Mock mode uses local JSON fixtures (`mock-data/`), bypasses network calls.
+
+### Silent Refresh Pattern
+Home & Map screens trigger `refreshPosts(true)` on focus: avoids spinner, merges new posts, improves perceived performance.
+
+---
+## Troubleshooting
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| Post detail flickers | Loading state reset despite existing data | Background refresh logic added; ensure latest build running |
+| Image not showing | Invalid numeric mapping or auth challenge | Confirm ID exists (`curl -I /image/{id}`) and env URL correct |
+| Resolve fails | Missing resolution code or auth headers | Ensure Basic Auth active & provide photo + code |
+| 405 on image | Wrong HTTP verb | Use GET only |
+| "Not authenticated" | Missing/invalid Basic header | Verify credentials & Base64 encoding |
+
+### Debug Tips
+```bash
+curl -X GET "$EXPO_PUBLIC_API_URL/posts/active/" -H "Authorization: Basic $(echo -n 'testuser:testpassword' | base64)"
+curl -X POST "$EXPO_PUBLIC_API_URL/upload-image/1?post_id=1" -H "Authorization: Basic $(echo -n 'testuser:testpassword' | base64)" -F "file=@local.jpg"
+```
+
+---
+## Security Notes
+- Static Basic Auth is for development only; rotate or remove before release.
+- Avoid embedding credentials in URLs (temporary workaround for image fetching). Replace with signed URLs or a token-based image proxy.
+- Sanitize user-generated content if backend exposes rich text in future.
+
+---
+## Contributing
+1. Branch from `main` (`feat/xyz-description`).
+2. Ensure lint passes (`npm run lint`).
+3. Keep patches focused (avoid unrelated formatting).
+4. Open a PR with description & screenshots (map, post detail, resolve flow).
+
+---
+## Roadmap (Suggested)
+- Token-based auth / refresh flow
+- Offline queue for posts & resolves
+- Real-time updates (WebSocket or SSE)
+- Accessibility audit & high contrast theme toggle
+- In-app analytics (privacy respecting)
+
+---
+## Original Expo Starter Docs
+
+# Welcome to your Expo app 👋
 
 ## Get started
 
@@ -129,3 +313,6 @@ All semantic foreground colors were chosen to meet or approach WCAG AA contrast 
 
 ---
 For questions or improvements, open an issue or extend the theme file.
+
+---
+_CivicMesh – Empowering communities through real-time collaboration._

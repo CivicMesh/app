@@ -1,3 +1,17 @@
+/**
+ * services/api.ts
+ * Centralized API client for CivicMesh mobile app.
+ *
+ * Responsibilities:
+ * - Environment-based base URL & mock/live switching (USE_MOCK_API)
+ * - Data shape normalization (snake_case ↔ camelCase) via normalizePost / buildPostPayload
+ * - Authentication: Basic Auth (temporary dev credentials) + generated session token for app context
+ * - Media handling: image upload (multipart), numeric image id → embeddable URL
+ * - Resilient fetch wrappers returning ApiResponse<T>
+ *
+ * SECURITY NOTE: Basic Auth credentials & embedded image URLs are development-only.
+ * Replace with token-based auth & signed asset URLs before production deployment.
+ */
 import postsFixture from '@/mock-data/posts.json';
 import usersFixture from '@/mock-data/users.json';
 import { CATEGORIES, Subcategory } from '@/constants/categories';
@@ -139,6 +153,12 @@ async function mockLogin(credentials: LoginCredentials): Promise<ApiResponse<any
  * @returns User data and token if successful
  */
 export async function login(credentials: LoginCredentials): Promise<ApiResponse<any>> {
+  /**
+   * LOGIN FLOW
+   * Backend expects GET /login/?username=<email>&password=<pwd>
+   * Returns: { message, user_id }
+   * We synthesize a transient token to store in context (no backend token yet).
+   */
   // Use mock API if enabled
   if (USE_MOCK_API) {
     return mockLogin(credentials);
@@ -237,6 +257,11 @@ async function mockSignup(signupData: SignupData): Promise<ApiResponse<any>> {
  * @returns User data and token if successful
  */
 export async function signup(signupData: SignupData): Promise<ApiResponse<any>> {
+  /**
+   * SIGNUP FLOW
+   * POST /users/ with snake_case fields.
+   * Response is normalized to camelCase for app usage.
+   */
   // Use mock API if enabled
   if (USE_MOCK_API) {
     return mockSignup(signupData);
@@ -623,6 +648,11 @@ async function mockPostForHelp(postData: PostForHelpData): Promise<ApiResponse<P
  * @returns Created post data
  */
 export async function postForHelp(postData: PostForHelpData): Promise<ApiResponse<Post>> {
+  /**
+   * CREATE POST
+   * 1. POST JSON payload (text + geolocation + optional media URI).
+   * 2. If photoUri is a local file (file://), perform multipart upload and patch the resulting post.
+   */
   // Use mock API if enabled
   if (USE_MOCK_API) {
     return mockPostForHelp(postData);
@@ -686,6 +716,10 @@ export async function postForHelp(postData: PostForHelpData): Promise<ApiRespons
  * @returns List of posts sorted by timestamp (newest first)
  */
 export async function getPosts(): Promise<ApiResponse<Post[]>> {
+  /**
+   * LIST ACTIVE POSTS
+   * Uses silent refresh pattern in screens to avoid UX flicker.
+   */
   // Use mock API if enabled
   if (USE_MOCK_API) {
     // Simulate network delay
@@ -740,6 +774,10 @@ export async function getPosts(): Promise<ApiResponse<Post[]>> {
 }
 
 export async function getPost(postId: string): Promise<ApiResponse<Post>> {
+  /**
+   * FETCH SINGLE POST
+   * Normalizes backend fields; merges into context for cached access.
+   */
   if (USE_MOCK_API) {
     const found = mockPostsStorage.find((post) => post.id === postId);
     if (!found) {
@@ -811,6 +849,10 @@ async function mockMarkOnMyWay(postId: string, userId: string): Promise<ApiRespo
  * @returns Updated post
  */
 export async function markOnMyWay(postId: string, userId: string): Promise<ApiResponse<Post>> {
+  /**
+   * MARK ON MY WAY
+   * Adds current user to on_my_way_by collection server-side.
+   */
   if (USE_MOCK_API) {
     return mockMarkOnMyWay(postId, userId);
   }
@@ -887,6 +929,11 @@ async function mockResolvePost(data: ResolvePostData): Promise<ApiResponse<Post>
  * @returns Updated post
  */
 export async function resolvePost(data: ResolvePostData): Promise<ApiResponse<Post>> {
+  /**
+   * RESOLVE POST
+   * Requires resolution code + resolution photo.
+   * Uploads local image first (if needed), then PUT full post snapshot with resolution metadata.
+   */
   if (USE_MOCK_API) {
     return mockResolvePost(data);
   }

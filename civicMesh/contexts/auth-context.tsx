@@ -23,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_KEY = '@auth_token';
 const USER_KEY = '@auth_user';
+const PERSIST_LOGIN = process.env.EXPO_PUBLIC_PERSIST_LOGIN === 'true';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -36,14 +37,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadStoredAuth = async () => {
     try {
-      const [storedToken, storedUser] = await Promise.all([
-        AsyncStorage.getItem(TOKEN_KEY),
-        AsyncStorage.getItem(USER_KEY),
-      ]);
+      if (PERSIST_LOGIN) {
+        const [storedToken, storedUser] = await Promise.all([
+          AsyncStorage.getItem(TOKEN_KEY),
+          AsyncStorage.getItem(USER_KEY),
+        ]);
 
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        if (storedToken && storedUser) {
+          setToken(storedToken);
+          setUser(JSON.parse(storedUser));
+        }
+      } else {
+        // Ensure any stale credentials are cleared in non-persistent mode
+        await Promise.all([
+          AsyncStorage.removeItem(TOKEN_KEY),
+          AsyncStorage.removeItem(USER_KEY),
+        ]);
       }
     } catch (error) {
       console.error('Error loading stored auth:', error);
@@ -61,11 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(response.token);
         setUser(userData);
 
-        // Store in AsyncStorage
-        await Promise.all([
-          AsyncStorage.setItem(TOKEN_KEY, response.token),
-          AsyncStorage.setItem(USER_KEY, JSON.stringify(userData)),
-        ]);
+        // Store in AsyncStorage if persistence is enabled
+        if (PERSIST_LOGIN) {
+          await Promise.all([
+            AsyncStorage.setItem(TOKEN_KEY, response.token),
+            AsyncStorage.setItem(USER_KEY, JSON.stringify(userData)),
+          ]);
+        }
 
         return { success: true };
       } else {
@@ -88,11 +99,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(response.token);
         setUser(userData);
 
-        // Store in AsyncStorage
-        await Promise.all([
-          AsyncStorage.setItem(TOKEN_KEY, response.token),
-          AsyncStorage.setItem(USER_KEY, JSON.stringify(userData)),
-        ]);
+        // Store in AsyncStorage if persistence is enabled
+        if (PERSIST_LOGIN) {
+          await Promise.all([
+            AsyncStorage.setItem(TOKEN_KEY, response.token),
+            AsyncStorage.setItem(USER_KEY, JSON.stringify(userData)),
+          ]);
+        }
 
         return { success: true };
       } else {
