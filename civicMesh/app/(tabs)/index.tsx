@@ -8,14 +8,22 @@ import { ResourceMapper } from '@/components/resource-mapper';
 import { Feed } from '@/components/feed';
 import { MenuDrawer } from '@/components/menu-drawer';
 import { useAuth } from '@/contexts/auth-context';
+import { FilterPanel } from '@/components/filter-panel';
+import { useFilters } from '@/contexts/filter-context';
 
 export default function HomeScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
+  const [filtersVisible, setFiltersVisible] = useState(false);
   const { logout, user } = useAuth();
+  const { hasActiveFilters } = useFilters('feed');
   const router = useRouter();
 
   const handleMenuPress = () => {
     setMenuVisible(true);
+  };
+
+  const handleFilterPress = () => {
+    setFiltersVisible(true);
   };
 
   const handleSignOut = async () => {
@@ -42,7 +50,7 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <HomeHeader onMenuPress={handleMenuPress} />
+      <HomeHeader onMenuPress={handleMenuPress} onFilterPress={handleFilterPress} hasActiveFilters={hasActiveFilters} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -57,6 +65,7 @@ export default function HomeScreen() {
         userEmail={user?.email}
         userName={userName}
       />
+  <FilterPanel visible={filtersVisible} onClose={() => setFiltersVisible(false)} scope="feed" />
     </ThemedView>
   );
 }

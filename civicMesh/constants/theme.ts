@@ -32,73 +32,73 @@ export const LegacyColors = {
   },
 };
 
-// Option A (Calm Civic) semantic design tokens
+// Original palette tokens (classic CivicMesh)
 // Core brand & surfaces
 const Brand = {
-  primary: '#2643A3', // Indigo 600
+  primary: '#0A7EA4',
   primaryForeground: '#FFFFFF',
-  accent: '#0A7EA4', // Existing teal
+  accent: '#0A7EA4',
   accentForeground: '#FFFFFF',
 };
 
 // Surfaces & elevations
 const SurfacesLight = {
-  background: '#F7F9FC',
-  backgroundAlt: '#EEF2F6',
+  background: '#FFFFFF',
+  backgroundAlt: '#F5F7FA',
   surface: '#FFFFFF',
-  surfaceAlt: '#F1F4F8',
+  surfaceAlt: '#F5F7FA',
   elevation1: '#FFFFFF',
   elevation2: '#F8FAFC',
-  elevation3: '#F1F4F8',
-  border: '#D8DEE4',
-  borderMuted: '#E2E8F0',
+  elevation3: '#F1F5F9',
+  border: '#E2E8F0',
+  borderMuted: '#EDF2F7',
 };
 const SurfacesDark = {
-  background: '#121417',
-  backgroundAlt: '#161A1E',
-  surface: '#1D2125',
-  surfaceAlt: '#161A1E',
-  elevation1: '#1D2125',
-  elevation2: '#242A30',
-  elevation3: '#2A3138',
-  border: '#2A3138',
-  borderMuted: '#343C44',
+  background: '#151718',
+  backgroundAlt: '#1F2122',
+  surface: '#1F2122',
+  surfaceAlt: '#27292A',
+  elevation1: '#1F2122',
+  elevation2: '#252728',
+  elevation3: '#2E3031',
+  border: '#2E3031',
+  borderMuted: '#3A3C3D',
 };
 
-// Semantic category colors
+// Semantic category colors (matching original badge hues)
 const Semantic = {
-  alert: '#D92D20',
-  warning: '#F79009',
+  alert: '#FF4444',
+  warning: '#FFAA00',
   help: '#0A7EA4',
-  resources: '#2E7D32',
-  accessibility: '#7E57C2',
+  resources: '#4CAF50',
+  accessibility: '#9C27B0',
 };
 
-// Subtle (soft background) variants (approx 12% tint alpha or light scale)
+// Subtle (soft background) variants
 const SemanticBgLight = {
-  alert: '#D92D201A',
-  warning: '#F790091A',
+  alert: '#FF44441A',
+  warning: '#FFAA001A',
   help: '#0A7EA41A',
-  resources: '#2E7D321A',
-  accessibility: '#7E57C21A',
+  resources: '#4CAF501A',
+  accessibility: '#9C27B01A',
 };
 const SemanticBgDark = {
-  alert: '#D92D2030',
-  warning: '#F7900930',
+  alert: '#FF444430',
+  warning: '#FFAA0030',
   help: '#0A7EA430',
-  resources: '#2E7D3230',
-  accessibility: '#7E57C230',
+  resources: '#4CAF5030',
+  accessibility: '#9C27B030',
 };
 
 // Text tokens
 const TextLight = {
   textPrimary: '#11181C',
-  textSecondary: '#3A4752',
-  textMuted: '#687076',
+  textSecondary: '#687076',
+  textMuted: '#889096',
 };
 const TextDark = {
   textPrimary: '#ECEDEE',
-  textSecondary: '#C2C7CB',
+  textSecondary: '#C1C7CD',
   textMuted: '#9BA1A6',
 };
 
@@ -107,10 +107,10 @@ const TextDark = {
 export const Colors = {
   light: {
     // Legacy compatibility
-    text: LegacyColors.light.text,
+    text: TextLight.textPrimary,
     tint: Brand.accent,
-    icon: LegacyColors.light.icon,
-    tabIconDefault: LegacyColors.light.icon,
+    icon: '#687076',
+    tabIconDefault: '#687076',
     tabIconSelected: Brand.accent,
     // New tokens
     brand: Brand,
@@ -120,11 +120,11 @@ export const Colors = {
     semanticBg: SemanticBgLight,
   },
   dark: {
-    text: LegacyColors.dark.text,
-    tint: Brand.accentForeground, // white
-    icon: LegacyColors.dark.icon,
-    tabIconDefault: LegacyColors.dark.icon,
-    tabIconSelected: Brand.accentForeground,
+    text: TextDark.textPrimary,
+    tint: '#FFFFFF',
+    icon: '#9BA1A6',
+    tabIconDefault: '#9BA1A6',
+    tabIconSelected: '#FFFFFF',
     brand: Brand,
     ...SurfacesDark,
     ...TextDark,

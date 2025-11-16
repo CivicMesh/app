@@ -1,0 +1,44 @@
+[
+  {
+    "id": "post-1001",
+    "title": "Community Shelter Needs Volunteers",
+    "category": "help",
+    "subcategory": "shelter",
+    "description": "Downtown shelter is at capacity and needs volunteers for the evening shift.",
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "userId": "mock-user-1",
+    "timestamp": "2025-11-12T18:24:00.000Z",
+    "createdAt": "2025-11-12T18:24:00.000Z",
+  "photoUri": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1",
+  "onMyWayBy": ["mock-user-2"]
+  },
+  {
+    "id": "post-1002",
+    "title": "Road Closure on Pine Street",
+    "category": "warning",
+    "subcategory": "road-closure",
+    "description": "Water main break has closed Pine Street between 3rd and 5th. Avoid the area.",
+    "latitude": 37.7813,
+    "longitude": -122.4113,
+    "userId": "mock-user-2",
+    "timestamp": "2025-11-13T14:10:00.000Z",
+    "createdAt": "2025-11-13T14:10:00.000Z",
+  "photoUri": "https://images.unsplash.com/photo-1526401281623-88688b829c67",
+  "onMyWayBy": []
+  },
+  {
+    "id": "post-1003",
+    "title": "Accessible Cooling Center",
+    "category": "accessibility resources",
+    "subcategory": "accessible-restroom",
+    "description": "Cooling center at Civic Center is open 9am-9pm with full accessibility services.",
+    "latitude": 37.7793,
+    "longitude": -122.4192,
+    "userId": "mock-user-3",
+    "timestamp": "2025-11-14T09:00:00.000Z",
+    "createdAt": "2025-11-14T09:00:00.000Z",
+  "photoUri": "https://images.unsplash.com/photo-1545239351-1141bd82e8a6",
+  "onMyWayBy": []
+  }
+]

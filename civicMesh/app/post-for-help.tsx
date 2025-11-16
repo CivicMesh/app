@@ -161,8 +161,8 @@ export default function PostForHelpScreen() {
               if (!result.canceled && result.assets[0]) {
                 setPhotoUri(result.assets[0].uri);
               }
-            } catch (err) {
-              console.error('Error taking photo:', err);
+            } catch (error) {
+              console.error('Error taking photo:', error);
               Alert.alert('Error', 'Failed to take photo. Please try again.');
             }
           },
@@ -187,8 +187,8 @@ export default function PostForHelpScreen() {
               if (!result.canceled && result.assets[0]) {
                 setPhotoUri(result.assets[0].uri);
               }
-            } catch (err) {
-              console.error('Error picking photo:', err);
+            } catch (error) {
+              console.error('Error picking photo:', error);
               Alert.alert('Error', 'Failed to pick photo. Please try again.');
             }
           },
@@ -225,8 +225,8 @@ export default function PostForHelpScreen() {
               if (!result.canceled && result.assets[0]) {
                 setVideoUri(result.assets[0].uri);
               }
-            } catch (err) {
-              console.error('Error recording video:', err);
+            } catch (error) {
+              console.error('Error recording video:', error);
               Alert.alert('Error', 'Failed to record video. Please try again.');
             }
           },
@@ -250,8 +250,8 @@ export default function PostForHelpScreen() {
               if (!result.canceled && result.assets[0]) {
                 setVideoUri(result.assets[0].uri);
               }
-            } catch (err) {
-              console.error('Error picking video:', err);
+            } catch (error) {
+              console.error('Error picking video:', error);
               Alert.alert('Error', 'Failed to pick video. Please try again.');
             }
           },
@@ -323,7 +323,8 @@ export default function PostForHelpScreen() {
       } else {
         setError(result.error || 'Failed to submit post');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error submitting post-for-help form:', error);
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);

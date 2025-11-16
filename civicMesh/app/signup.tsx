@@ -47,7 +47,8 @@ export default function SignupScreen() {
       } else {
         setError(result.error || 'Signup failed');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Signup failed unexpectedly:', error);
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);

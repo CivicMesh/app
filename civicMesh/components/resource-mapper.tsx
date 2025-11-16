@@ -29,14 +29,14 @@ function MiniMap({ style }: { style?: any }) {
   // Show loading state
   if (isLoading || !initialRegion) {
     return (
-      <View style={[style, { backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[style, { justifyContent: 'center', alignItems: 'center' }]}>
         <MaterialIcons name="location-searching" size={32} color={colors.icon} />
       </View>
     );
   }
 
   return (
-    <View style={[style, { backgroundColor: colors.surface, position: 'relative' }]}>
+    <View style={[style, { position: 'relative' }] }>
       <MapView
         style={StyleSheet.absoluteFill}
         provider={PROVIDER_GOOGLE}
@@ -64,15 +64,15 @@ export function ResourceMapper() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   return (
-    <ThemedView style={[styles.container, { backgroundColor: colors.surfaceAlt, borderColor: colors.borderMuted }] }>
-      <ThemedView style={[styles.header, { borderBottomColor: colors.borderMuted }] }>
+    <ThemedView style={styles.container}>
+      <ThemedView style={[styles.header, { backgroundColor: colors.background }] }>
         <TouchableOpacity onPress={() => router.push('/map')} accessibilityRole="button" accessibilityLabel="Open map">
           <ThemedText type="subtitle">Map</ThemedText>
         </TouchableOpacity>
         <MaterialIcons name="map" size={24} color={colors.brand.accent} />
       </ThemedView>
       <TouchableOpacity
-        style={[styles.mapContainer, { backgroundColor: colors.surface, borderColor: colors.borderMuted }]}
+        style={styles.mapContainer}
         onPress={() => router.push('/map')}
         accessibilityRole="button"
         accessibilityLabel="Open full map">
@@ -85,8 +85,6 @@ export function ResourceMapper() {
 const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
-    borderWidth: 1,
-    borderRadius: 16,
   },
   header: {
     flexDirection: 'row',
@@ -94,7 +92,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
   },
   mapContainer: {
     height: 300,
@@ -102,7 +99,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginHorizontal: 16,
     marginBottom: 8,
-    borderWidth: 1,
   },
   map: {
     flex: 1,

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "mock-user-1",
+    "email": "jane.doe@example.com",
+    "password": "password123",
+    "firstName": "Jane",
+    "lastName": "Doe"
+  },
+  {
+    "id": "mock-user-2",
+    "email": "alex.lee@example.com",
+    "password": "password123",
+    "firstName": "Alex",
+    "lastName": "Lee"
+  },
+  {
+    "id": "mock-user-3",
+    "email": "maria.garcia@example.com",
+    "password": "password123",
+    "firstName": "Maria",
+    "lastName": "Garcia"
+  }
+]

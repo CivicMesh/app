@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { StyleSheet, ScrollView, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
@@ -7,6 +8,7 @@ import { Colors, getCategorySemanticColor, getCategorySemanticBg } from '@/const
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { usePosts } from '@/contexts/posts-context';
 import { Post } from '@/services/api';
+import { useFilters } from '@/contexts/filter-context';
 
 const CATEGORY_ICONS: Record<Post['category'], string> = {
   alert: 'warning',
@@ -110,6 +112,32 @@ export function Feed() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { posts, isLoading } = usePosts();
+  const { selectedCategories, selectedSubcategories, hasActiveFilters, clearFilters } = useFilters('feed');
+
+  const filteredPosts = useMemo(() => {
+    if (!hasActiveFilters) {
+      return posts;
+    }
+
+    const categorySet = new Set(selectedCategories);
+    const subcategorySet = new Set(
+      Object.values(selectedSubcategories).reduce<string[]>((acc, curr = []) => acc.concat(curr), [])
+    );
+
+    const hasCategoryFilters = categorySet.size > 0;
+    const hasSubcategoryFilters = subcategorySet.size > 0;
+
+    return posts.filter((post) => {
+      const categoryMatch = hasCategoryFilters ? categorySet.has(post.category) : true;
+      const subcategoryMatch = hasSubcategoryFilters
+        ? (post.subcategory ? subcategorySet.has(post.subcategory) : false)
+        : true;
+      return categoryMatch && subcategoryMatch;
+    });
+  }, [hasActiveFilters, posts, selectedCategories, selectedSubcategories]);
+
+  const showNoPosts = !isLoading && posts.length === 0;
+  const showNoMatches = !isLoading && posts.length > 0 && filteredPosts.length === 0 && hasActiveFilters;
 
   return (
     <ThemedView style={styles.container}>
@@ -128,14 +156,28 @@ export function Feed() {
             <ActivityIndicator size="large" color={colors.tint} />
             <ThemedText style={styles.loadingText}>Loading posts...</ThemedText>
           </View>
-        ) : posts.length === 0 ? (
+        ) : showNoPosts ? (
           <View style={styles.emptyContainer}>
             <MaterialIcons name="inbox" size={48} color={colors.icon} />
             <ThemedText style={styles.emptyText}>No posts yet</ThemedText>
             <ThemedText style={styles.emptySubtext}>Be the first to post for help!</ThemedText>
           </View>
+        ) : showNoMatches ? (
+          <View style={styles.emptyContainer}>
+            <MaterialIcons name="filter-list" size={48} color={colors.icon} />
+            <ThemedText style={styles.emptyText}>No posts match these filters</ThemedText>
+            <ThemedText style={styles.emptySubtext}>Adjust or clear your filters to see more posts.</ThemedText>
+            <TouchableOpacity
+              style={[styles.clearFiltersButton, { borderColor: colors.tint }]}
+              onPress={clearFilters}
+              accessibilityRole="button"
+              accessibilityLabel="Clear filters">
+              <MaterialIcons name="refresh" size={18} color={colors.tint} style={styles.clearFiltersIcon} />
+              <ThemedText style={[styles.clearFiltersText, { color: colors.tint }]}>Reset filters</ThemedText>
+            </TouchableOpacity>
+          </View>
         ) : (
-          posts.map((post) => <FeedItem key={post.id} post={post} />)
+          filteredPosts.map((post) => <FeedItem key={post.id} post={post} />)
         )}
       </ScrollView>
     </ThemedView>
@@ -249,6 +291,23 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
     opacity: 0.7,
+  },
+  clearFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginTop: 16,
+    borderColor: 'transparent',
+  },
+  clearFiltersIcon: {
+    marginRight: 8,
+  },
+  clearFiltersText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

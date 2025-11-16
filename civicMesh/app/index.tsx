@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/auth-context';
 import { ThemedView } from '@/components/themed-view';
@@ -21,7 +21,7 @@ export default function Index() {
         router.replace('/login');
       }
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, router]);
 
   if (isLoading) {
     return (

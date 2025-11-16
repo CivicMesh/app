@@ -1,14 +1,14 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { useRouter, useSegments } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { PostsProvider } from '@/contexts/posts-context';
+import { FilterProvider } from '@/contexts/filter-context';
 import { LocationProvider } from '@/contexts/location-context';
 
 export const unstable_settings = {
@@ -33,7 +33,7 @@ function RootLayoutNav() {
       // Redirect to home if authenticated and trying to access auth pages
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, router, segments]);
 
   return null;
 }
@@ -45,22 +45,24 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <PostsProvider>
-          <LocationProvider>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-              <RootLayoutNav />
-              <Stack>
-                <Stack.Screen name="login" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
-                <Stack.Screen name="signup" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="post-for-help" options={{ headerShown: false, presentation: 'modal' }} />
-                <Stack.Screen name="map" options={{ headerShown: false }} />
-                <Stack.Screen name="active-feed" options={{ headerShown: false }} />
-                <Stack.Screen name="post-detail" options={{ headerShown: false }} />
-                <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-              </Stack>
-              <StatusBar style="auto" />
-            </ThemeProvider>
-          </LocationProvider>
+          <FilterProvider>
+            <LocationProvider>
+              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                <RootLayoutNav />
+                <Stack>
+                  <Stack.Screen name="login" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+                  <Stack.Screen name="signup" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="post-for-help" options={{ headerShown: false, presentation: 'modal' }} />
+                  <Stack.Screen name="map" options={{ headerShown: false }} />
+                  <Stack.Screen name="active-feed" options={{ headerShown: false }} />
+                  <Stack.Screen name="post-detail" options={{ headerShown: false }} />
+                  <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+                </Stack>
+                <StatusBar style="auto" />
+              </ThemeProvider>
+            </LocationProvider>
+          </FilterProvider>
         </PostsProvider>
       </AuthProvider>
     </GestureHandlerRootView>

@@ -34,7 +34,8 @@ export default function LoginScreen() {
       } else {
         setError(result.error || 'Login failed');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Login failed unexpectedly:', error);
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -114,7 +115,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <ThemedView style={styles.signupLink}>
-            <ThemedText>Don't have an account? </ThemedText>
+            <ThemedText>Don&apos;t have an account? </ThemedText>
             <Link href="/signup" asChild>
               <TouchableOpacity>
                 <ThemedText style={[styles.linkText, { color: colors.tint }]}>Sign Up</ThemedText>

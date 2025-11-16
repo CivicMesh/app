@@ -100,7 +100,8 @@ export default function PostDetailScreen() {
       } else {
         Alert.alert('Error', result.error || 'Failed to mark on my way. Please try again.');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error marking on my way:', error);
       Alert.alert('Error', 'An unexpected error occurred.');
     } finally {
       setLoading(false);
@@ -154,8 +155,8 @@ export default function PostDetailScreen() {
               if (!result.canceled && result.assets[0]) {
                 setResolutionPhotoUri(result.assets[0].uri);
               }
-            } catch (err) {
-              console.error('Error taking photo:', err);
+            } catch (error) {
+              console.error('Error taking photo:', error);
               Alert.alert('Error', 'Failed to take photo. Please try again.');
             }
           },
@@ -180,8 +181,8 @@ export default function PostDetailScreen() {
               if (!result.canceled && result.assets[0]) {
                 setResolutionPhotoUri(result.assets[0].uri);
               }
-            } catch (err) {
-              console.error('Error picking photo:', err);
+            } catch (error) {
+              console.error('Error picking photo:', error);
               Alert.alert('Error', 'Failed to pick photo. Please try again.');
             }
           },
@@ -218,8 +219,8 @@ export default function PostDetailScreen() {
               if (!result.canceled && result.assets[0]) {
                 setResolutionVideoUri(result.assets[0].uri);
               }
-            } catch (err) {
-              console.error('Error recording video:', err);
+            } catch (error) {
+              console.error('Error recording video:', error);
               Alert.alert('Error', 'Failed to record video. Please try again.');
             }
           },
@@ -243,8 +244,8 @@ export default function PostDetailScreen() {
               if (!result.canceled && result.assets[0]) {
                 setResolutionVideoUri(result.assets[0].uri);
               }
-            } catch (err) {
-              console.error('Error picking video:', err);
+            } catch (error) {
+              console.error('Error picking video:', error);
               Alert.alert('Error', 'Failed to pick video. Please try again.');
             }
           },
@@ -294,7 +295,8 @@ export default function PostDetailScreen() {
         setLoading(false);
         Alert.alert('Error', result.error || 'Failed to resolve post. Please try again.');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error resolving post:', error);
       setLoading(false);
       Alert.alert('Error', 'An unexpected error occurred.');
     }

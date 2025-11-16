@@ -7,6 +7,8 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { FilterPanel } from '@/components/filter-panel';
+import { useFilters } from '@/contexts/filter-context';
 import MapView, { PROVIDER_GOOGLE, Region, Marker } from 'react-native-maps';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
@@ -101,6 +103,8 @@ export default function MapScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const borderColor = colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+  const { hasActiveFilters } = useFilters('map');
+  const [filtersVisible, setFiltersVisible] = useState(false);
 
   // Hardware back should go to home
   useFocusEffect(
@@ -121,7 +125,14 @@ export default function MapScreen() {
           <MaterialIcons name="arrow-back" size={24} color={colors.icon} />
         </TouchableOpacity>
         <ThemedText type="subtitle">Map</ThemedText>
-        <View style={styles.headerButton} />
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => setFiltersVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Open filters">
+          <MaterialIcons name="filter-alt" size={24} color={hasActiveFilters ? colors.tint : colors.icon} />
+          {hasActiveFilters && <View style={[styles.activeDot, { backgroundColor: colors.tint }]} />}
+        </TouchableOpacity>
       </View>
 
       <View style={styles.mapFullContainer}>
@@ -129,6 +140,7 @@ export default function MapScreen() {
         {/* Dynamic Layer Overlay (always on, sits above map) */}
         <View pointerEvents="none" style={styles.dynamicLayer} />
       </View>
+  <FilterPanel visible={filtersVisible} onClose={() => setFiltersVisible(false)} scope="map" />
     </ThemedView>
   );
 }
@@ -147,16 +159,24 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: 8,
+    position: 'relative',
   },
   mapFullContainer: {
     flex: 1,
     position: 'relative',
   },
-  
   dynamicLayer: {
     position: 'absolute',
     top: 12,
     left: 12,
     right: 12,
+  },
+  activeDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });

@@ -7,7 +7,7 @@ export default function TabTwoScreen() {
   useEffect(() => {
     // Redirect to post-for-help screen
     router.replace('/post-for-help');
-  }, []);
+  }, [router]);
 
   return null;
 }

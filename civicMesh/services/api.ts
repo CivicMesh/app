@@ -1,3 +1,6 @@
+import postsFixture from '@/mock-data/posts.json';
+import usersFixture from '@/mock-data/users.json';
+
 // API Configuration
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
 
@@ -25,6 +28,18 @@ type ApiResponse<T> = {
   token?: string;
 };
 
+
+type MockUser = {
+  id: string;
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  [key: string]: any;
+};
+
+const mockUsersStorage: MockUser[] = usersFixture.map((user) => ({ ...user }));
+
 /**
  * Mock login function for testing without backend
  */
@@ -32,7 +47,7 @@ async function mockLogin(credentials: LoginCredentials): Promise<ApiResponse<any
   // Simulate network delay
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
-  // Mock validation - accept any email/password for testing
+  // Basic presence validation
   if (!credentials.email || !credentials.password) {
     return {
       success: false,
@@ -40,15 +55,22 @@ async function mockLogin(credentials: LoginCredentials): Promise<ApiResponse<any
     };
   }
 
+  const normalizedEmail = credentials.email.trim().toLowerCase();
+  const matchedUser = mockUsersStorage.find((user) => user.email.toLowerCase() === normalizedEmail && user.password === credentials.password);
+
+  if (!matchedUser) {
+    return {
+      success: false,
+      error: 'Invalid email or password',
+    };
+  }
+
+  const { password, ...safeUser } = matchedUser;
+
   // Simulate successful login
   return {
     success: true,
-    data: {
-      id: 'mock-user-1',
-      email: credentials.email,
-      firstName: 'Test',
-      lastName: 'User',
-    },
+    data: safeUser,
     token: 'mock-jwt-token-' + Date.now(),
   };
 }
@@ -114,24 +136,32 @@ async function mockSignup(signupData: SignupData): Promise<ApiResponse<any>> {
     };
   }
 
-  // Simulate email already exists error (for testing error handling)
-  // Uncomment to test error case:
-  // if (signupData.email === 'test@example.com') {
-  //   return {
-  //     success: false,
-  //     error: 'Email already exists',
-  //   };
-  // }
+  const trimmedEmail = signupData.email.trim();
+  const normalizedEmail = trimmedEmail.toLowerCase();
+  const existingUser = mockUsersStorage.find((user) => user.email.toLowerCase() === normalizedEmail);
 
-  // Simulate successful signup
+  if (existingUser) {
+    return {
+      success: false,
+      error: 'Email already exists',
+    };
+  }
+
+  const newUser: MockUser = {
+    id: 'mock-user-' + Date.now(),
+    email: trimmedEmail,
+    password: signupData.password,
+    firstName: signupData.firstName,
+    lastName: signupData.lastName,
+  };
+
+  mockUsersStorage.push(newUser);
+
+  const { password, ...safeUser } = newUser;
+
   return {
     success: true,
-    data: {
-      id: 'mock-user-' + Date.now(),
-      email: signupData.email,
-      firstName: signupData.firstName,
-      lastName: signupData.lastName,
-    },
+    data: safeUser,
     token: 'mock-jwt-token-' + Date.now(),
   };
 }
@@ -220,6 +250,9 @@ export type Post = {
   resolvedAt?: string;
 };
 
+const postsFixtureData = postsFixture as Post[];
+let mockPostsStorage: Post[] = postsFixtureData.map((post) => ({ ...post }));
+
 /**
  * Mock post function for testing without backend
  */
@@ -256,6 +289,7 @@ async function mockPostForHelp(postData: PostForHelpData): Promise<ApiResponse<P
     createdAt: new Date().toISOString(),
     photoUri: postData.photoUri,
     videoUri: postData.videoUri,
+    onMyWayBy: [],
   };
 
   // Store in mock storage
@@ -307,9 +341,6 @@ export async function postForHelp(postData: PostForHelpData): Promise<ApiRespons
     };
   }
 }
-
-// Mock storage for posts (in-memory, will reset on app restart)
-let mockPostsStorage: Post[] = [];
 
 /**
  * Get all posts - GET request

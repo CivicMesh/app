@@ -6,10 +6,14 @@ import { Colors } from '@/constants/theme';
 
 type HomeHeaderProps = {
   onMenuPress?: () => void;
+  onFilterPress?: () => void;
+  hasActiveFilters?: boolean;
 };
 
 export function HomeHeader({
   onMenuPress,
+  onFilterPress,
+  hasActiveFilters,
 }: HomeHeaderProps) {
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
@@ -33,6 +37,19 @@ export function HomeHeader({
         accessibilityRole="button">
         <MaterialIcons name="menu" size={28} color={colors.icon} />
       </TouchableOpacity>
+      <View style={styles.headerSpacer} />
+      {onFilterPress ? (
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={onFilterPress}
+          accessibilityLabel="Open filters"
+          accessibilityRole="button">
+          <MaterialIcons name="filter-alt" size={24} color={hasActiveFilters ? colors.tint : colors.icon} />
+          {hasActiveFilters && <View style={[styles.filterDot, { backgroundColor: colors.tint }]} />}
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.menuButton} />
+      )}
     </View>
   );
 }
@@ -48,6 +65,21 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     padding: 8,
+  },
+  headerSpacer: {
+    flex: 1,
+  },
+  filterButton: {
+    padding: 8,
+    position: 'relative',
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });
 
