@@ -194,6 +194,8 @@ type PostForHelpData = {
   latitude: number;
   longitude: number;
   userId?: string;
+  photoUri: string; // required
+  videoUri?: string; // optional
 };
 
 export type Post = {
@@ -207,6 +209,15 @@ export type Post = {
   userId: string;
   timestamp: string;
   createdAt: string;
+  photoUri: string;
+  videoUri?: string;
+  // Status tracking
+  onMyWayBy?: string[]; // Array of user IDs who marked "On My Way"
+  resolvedBy?: string; // User ID who resolved
+  resolutionCode?: string;
+  resolutionPhotoUri?: string;
+  resolutionVideoUri?: string;
+  resolvedAt?: string;
 };
 
 /**
@@ -243,6 +254,8 @@ async function mockPostForHelp(postData: PostForHelpData): Promise<ApiResponse<P
     userId: postData.userId || 'mock-user',
     timestamp: new Date().toISOString(),
     createdAt: new Date().toISOString(),
+    photoUri: postData.photoUri,
+    videoUri: postData.videoUri,
   };
 
   // Store in mock storage
@@ -344,6 +357,150 @@ export async function getPosts(): Promise<ApiResponse<Post[]>> {
     return {
       success: true,
       data: posts,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error occurred',
+    };
+  }
+}
+
+/**
+ * Mark "On My Way" - Mock implementation
+ */
+async function mockMarkOnMyWay(postId: string, userId: string): Promise<ApiResponse<Post>> {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  const post = mockPostsStorage.find((p) => p.id === postId);
+  if (!post) {
+    return {
+      success: false,
+      error: 'Post not found',
+    };
+  }
+
+  // Add user to onMyWayBy array if not already there
+  if (!post.onMyWayBy) {
+    post.onMyWayBy = [];
+  }
+  if (!post.onMyWayBy.includes(userId)) {
+    post.onMyWayBy.push(userId);
+  }
+
+  return {
+    success: true,
+    data: post,
+  };
+}
+
+/**
+ * Mark post as "On My Way"
+ * @param postId - ID of the post
+ * @param userId - ID of the user marking "On My Way"
+ * @returns Updated post
+ */
+export async function markOnMyWay(postId: string, userId: string): Promise<ApiResponse<Post>> {
+  if (USE_MOCK_API) {
+    return mockMarkOnMyWay(postId, userId);
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/posts/${postId}/on-my-way`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.message || data.error || 'Failed to mark on my way',
+      };
+    }
+
+    return {
+      success: true,
+      data: data.post || data,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error occurred',
+    };
+  }
+}
+
+type ResolvePostData = {
+  postId: string;
+  userId: string;
+  resolutionCode: string;
+  resolutionPhotoUri: string;
+  resolutionVideoUri?: string;
+};
+
+/**
+ * Resolve post - Mock implementation
+ */
+async function mockResolvePost(data: ResolvePostData): Promise<ApiResponse<Post>> {
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  const post = mockPostsStorage.find((p) => p.id === data.postId);
+  if (!post) {
+    return {
+      success: false,
+      error: 'Post not found',
+    };
+  }
+
+  // Mark as resolved
+  post.resolvedBy = data.userId;
+  post.resolutionCode = data.resolutionCode;
+  post.resolutionPhotoUri = data.resolutionPhotoUri;
+  post.resolutionVideoUri = data.resolutionVideoUri;
+  post.resolvedAt = new Date().toISOString();
+
+  return {
+    success: true,
+    data: post,
+  };
+}
+
+/**
+ * Resolve a post
+ * @param data - Resolution data including code and media
+ * @returns Updated post
+ */
+export async function resolvePost(data: ResolvePostData): Promise<ApiResponse<Post>> {
+  if (USE_MOCK_API) {
+    return mockResolvePost(data);
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/posts/${data.postId}/resolve`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: responseData.message || responseData.error || 'Failed to resolve post',
+      };
+    }
+
+    return {
+      success: true,
+      data: responseData.post || responseData,
     };
   } catch (error) {
     return {

@@ -11,12 +11,14 @@ import {
   Alert,
   View,
   BackHandler,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 // @ts-ignore - expo-location may not be installed
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -34,6 +36,8 @@ export default function PostForHelpScreen() {
   const [category, setCategory] = useState<Category | null>(null);
   const [subcategory, setSubcategory] = useState<string | null>(null);
   const [description, setDescription] = useState('');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [videoUri, setVideoUri] = useState<string | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [error, setError] = useState('');
@@ -53,8 +57,8 @@ export default function PostForHelpScreen() {
 
   // Check if there are unsaved changes
   const hasUnsavedChanges = useCallback(() => {
-    return !!(title.trim() || category || subcategory || description.trim());
-  }, [title, category, subcategory, description]);
+    return !!(title.trim() || category || subcategory || description.trim() || photoUri || videoUri);
+  }, [title, category, subcategory, description, photoUri, videoUri]);
 
   // Handle back navigation with confirmation dialog
   const handleBack = useCallback(() => {
@@ -133,6 +137,133 @@ export default function PostForHelpScreen() {
     }
   };
 
+  const pickPhoto = async () => {
+    Alert.alert(
+      'Add Photo',
+      'Choose an option',
+      [
+        {
+          text: 'Take Photo',
+          onPress: async () => {
+            try {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert('Permission Required', 'Please enable camera access to take a photo.');
+                return;
+              }
+
+              const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.8,
+              });
+
+              if (!result.canceled && result.assets[0]) {
+                setPhotoUri(result.assets[0].uri);
+              }
+            } catch (err) {
+              console.error('Error taking photo:', err);
+              Alert.alert('Error', 'Failed to take photo. Please try again.');
+            }
+          },
+        },
+        {
+          text: 'Choose from Library',
+          onPress: async () => {
+            try {
+              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert('Permission Required', 'Please enable photo library access to add a photo.');
+                return;
+              }
+
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.8,
+              });
+
+              if (!result.canceled && result.assets[0]) {
+                setPhotoUri(result.assets[0].uri);
+              }
+            } catch (err) {
+              console.error('Error picking photo:', err);
+              Alert.alert('Error', 'Failed to pick photo. Please try again.');
+            }
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
+
+  const pickVideo = async () => {
+    Alert.alert(
+      'Add Video',
+      'Choose an option',
+      [
+        {
+          text: 'Record Video',
+          onPress: async () => {
+            try {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert('Permission Required', 'Please enable camera access to record a video.');
+                return;
+              }
+
+              const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ['videos'],
+                allowsEditing: true,
+                quality: 0.8,
+              });
+
+              if (!result.canceled && result.assets[0]) {
+                setVideoUri(result.assets[0].uri);
+              }
+            } catch (err) {
+              console.error('Error recording video:', err);
+              Alert.alert('Error', 'Failed to record video. Please try again.');
+            }
+          },
+        },
+        {
+          text: 'Choose from Library',
+          onPress: async () => {
+            try {
+              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert('Permission Required', 'Please enable photo library access to add a video.');
+                return;
+              }
+
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['videos'],
+                allowsEditing: true,
+                quality: 0.8,
+              });
+
+              if (!result.canceled && result.assets[0]) {
+                setVideoUri(result.assets[0].uri);
+              }
+            } catch (err) {
+              console.error('Error picking video:', err);
+              Alert.alert('Error', 'Failed to pick video. Please try again.');
+            }
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
+
   const handleSubmit = async () => {
     if (!title.trim()) {
       setError('Please enter a title');
@@ -154,6 +285,11 @@ export default function PostForHelpScreen() {
       return;
     }
 
+    if (!photoUri) {
+      setError('Photo is required. Please add a photo.');
+      return;
+    }
+
     if (!location) {
       setError('Location is required. Please allow location access.');
       return;
@@ -171,6 +307,8 @@ export default function PostForHelpScreen() {
         latitude: location.latitude,
         longitude: location.longitude,
         userId: user?.id || user?.email,
+        photoUri,
+        videoUri: videoUri || undefined,
       });
 
       if (result.success && result.data) {
@@ -353,6 +491,67 @@ export default function PostForHelpScreen() {
               />
             </ThemedView>
 
+            {/* Photo Field (Required) */}
+            <ThemedView style={styles.inputContainer}>
+              <ThemedText style={styles.label}>Photo *</ThemedText>
+              {photoUri ? (
+                <View style={styles.mediaPreviewContainer}>
+                  <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+                  <TouchableOpacity
+                    style={[styles.changeMediaButton, { backgroundColor: colors.tint }]}
+                    onPress={pickPhoto}
+                    disabled={loading}>
+                    <MaterialIcons name="edit" size={16} color={colorScheme === 'dark' ? '#000' : '#fff'} />
+                    <Text style={[styles.changeMediaButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
+                      Change Photo
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.mediaButton, { backgroundColor: colors.tint }]}
+                  onPress={pickPhoto}
+                  disabled={loading}>
+                  <MaterialIcons name="add-a-photo" size={20} color={colorScheme === 'dark' ? '#000' : '#fff'} />
+                  <Text style={[styles.mediaButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
+                    Add Photo
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </ThemedView>
+
+            {/* Video Field (Optional) */}
+            <ThemedView style={styles.inputContainer}>
+              <ThemedText style={styles.label}>Video (Optional)</ThemedText>
+              {videoUri ? (
+                <View style={styles.mediaPreviewContainer}>
+                  <View style={styles.videoPreview}>
+                    <MaterialIcons name="videocam" size={48} color={colors.tint} />
+                    <ThemedText style={styles.videoPreviewText}>Video selected</ThemedText>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.changeMediaButton, { backgroundColor: colors.tint }]}
+                    onPress={pickVideo}
+                    disabled={loading}>
+                    <MaterialIcons name="edit" size={16} color={colorScheme === 'dark' ? '#000' : '#fff'} />
+                    <Text style={[styles.changeMediaButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
+                      Change Video
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.mediaButton, { backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f5f5f5', borderWidth: 1, borderColor: colorScheme === 'dark' ? '#444' : '#ddd' }]}
+                  onPress={pickVideo}
+                  disabled={loading}>
+                  <MaterialIcons name="videocam" size={20} color={colors.text} />
+                  <Text style={[styles.mediaButtonText, { color: colors.text }]}>
+                    Add Video
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </ThemedView>
+
             {/* Location Status */}
             <ThemedView style={styles.inputContainer}>
               <ThemedText style={styles.label}>Location</ThemedText>
@@ -524,6 +723,54 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
+  },
+  mediaPreviewContainer: {
+    gap: 12,
+  },
+  photoPreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    backgroundColor: '#e0e0e0',
+  },
+  videoPreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoPreviewText: {
+    marginTop: 8,
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  mediaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  mediaButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  changeMediaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  changeMediaButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

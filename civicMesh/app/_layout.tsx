@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { PostsProvider } from '@/contexts/posts-context';
+import { LocationProvider } from '@/contexts/location-context';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -44,19 +45,22 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <PostsProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <RootLayoutNav />
-            <Stack>
-              <Stack.Screen name="login" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
-              <Stack.Screen name="signup" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="post-for-help" options={{ headerShown: false, presentation: 'modal' }} />
-              <Stack.Screen name="map" options={{ headerShown: false }} />
-              <Stack.Screen name="active-feed" options={{ headerShown: false }} />
-              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-            </Stack>
-            <StatusBar style="auto" />
-          </ThemeProvider>
+          <LocationProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <RootLayoutNav />
+              <Stack>
+                <Stack.Screen name="login" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+                <Stack.Screen name="signup" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="post-for-help" options={{ headerShown: false, presentation: 'modal' }} />
+                <Stack.Screen name="map" options={{ headerShown: false }} />
+                <Stack.Screen name="active-feed" options={{ headerShown: false }} />
+                <Stack.Screen name="post-detail" options={{ headerShown: false }} />
+                <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+              </Stack>
+              <StatusBar style="auto" />
+            </ThemeProvider>
+          </LocationProvider>
         </PostsProvider>
       </AuthProvider>
     </GestureHandlerRootView>

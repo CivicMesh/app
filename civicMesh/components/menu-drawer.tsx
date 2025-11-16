@@ -32,9 +32,11 @@ export function MenuDrawer({ visible, onClose, onSignOut, userEmail, userName }:
               style={[
                 styles.drawer,
                 {
-                  backgroundColor: colors.background,
+                  backgroundColor: colors.elevation2,
+                  borderColor: colors.border,
                   paddingTop: insets.top + 20,
                   paddingBottom: insets.bottom + 20,
+                  shadowColor: colorScheme === 'dark' ? '#000' : '#000',
                 },
               ]}>
               {/* Header */}
@@ -52,7 +54,7 @@ export function MenuDrawer({ visible, onClose, onSignOut, userEmail, userName }:
                 <View
                   style={[
                     styles.userInfo,
-                    { borderBottomColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' },
+                    { borderBottomColor: colorScheme === 'dark' ? colors.border : colors.borderMuted },
                   ]}>
                   {userName && (
                     <ThemedText type="defaultSemiBold" style={styles.userName}>
@@ -68,10 +70,10 @@ export function MenuDrawer({ visible, onClose, onSignOut, userEmail, userName }:
               {/* Menu Items */}
               <View style={styles.menuItems}>
                 <TouchableOpacity
-                  style={[styles.menuItem, { borderBottomColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}
+                  style={[styles.menuItem, { borderBottomColor: colorScheme === 'dark' ? colors.border : colors.borderMuted }]}
                   onPress={onSignOut}
                   activeOpacity={0.7}>
-                  <MaterialIcons name="logout" size={24} color={colors.tint} />
+                  <MaterialIcons name="logout" size={24} color={colors.brand.primary} />
                   <ThemedText style={styles.menuItemText}>Sign Out</ThemedText>
                   <MaterialIcons name="chevron-right" size={20} color={colors.icon} />
                 </TouchableOpacity>
@@ -96,6 +98,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderTopRightRadius: 0,
     borderBottomRightRadius: 0,
+    borderRightWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 0 },
     shadowOpacity: 0.25,

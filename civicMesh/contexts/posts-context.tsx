@@ -6,6 +6,7 @@ type PostsContextType = {
   isLoading: boolean;
   refreshPosts: () => Promise<void>;
   addPost: (post: Post) => void;
+  updatePost: (postId: string, updates: Partial<Post>) => void;
 };
 
 const PostsContext = createContext<PostsContextType | undefined>(undefined);
@@ -43,6 +44,17 @@ export function PostsProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const updatePost = (postId: string, updates: Partial<Post>) => {
+    setPosts((prevPosts) => {
+      return prevPosts.map((post) => {
+        if (post.id === postId) {
+          return { ...post, ...updates };
+        }
+        return post;
+      });
+    });
+  };
+
   useEffect(() => {
     refreshPosts();
   }, []);
@@ -54,6 +66,7 @@ export function PostsProvider({ children }: { children: ReactNode }) {
         isLoading,
         refreshPosts,
         addPost,
+        updatePost,
       }}>
       {children}
     </PostsContext.Provider>

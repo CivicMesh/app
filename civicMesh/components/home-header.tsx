@@ -14,10 +14,18 @@ export function HomeHeader({
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const colors = Colors[colorScheme ?? 'light'];
-  const borderColor = colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+  const borderColor = colorScheme === 'dark' ? colors.border : colors.borderMuted;
 
   return (
-    <View style={[styles.header, { paddingTop: insets.top, backgroundColor: colors.background, borderBottomColor: borderColor }]}>
+    <View
+      style={[
+        styles.header,
+        {
+          paddingTop: insets.top,
+          backgroundColor: colors.surface,
+          borderBottomColor: borderColor,
+        },
+      ]}>
       <TouchableOpacity
         style={styles.menuButton}
         onPress={onMenuPress}

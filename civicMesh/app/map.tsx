@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { StyleSheet, View, TouchableOpacity, BackHandler } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,22 +7,91 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
-import MapView, { PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE, Region, Marker } from 'react-native-maps';
 import { useFocusEffect } from '@react-navigation/native';
+import * as Location from 'expo-location';
+import { useLocation } from '@/contexts/location-context';
 
 function FullMap() {
-  const [region] = useState<Region>({
-    latitude: 37.7749,
-    longitude: -122.4194,
-    latitudeDelta: 0.1,
-    longitudeDelta: 0.1,
-  });
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  const { userLocation: cachedLocation, isLoading: locationLoading } = useLocation();
+  const [initialRegion, setInitialRegion] = useState<Region | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  useEffect(() => {
+    // Use cached location immediately if available
+    if (cachedLocation && !initialRegion) {
+      setUserLocation(cachedLocation);
+      setInitialRegion({
+        latitude: cachedLocation.latitude,
+        longitude: cachedLocation.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      });
+    }
+  }, [cachedLocation, initialRegion]);
+
+  useEffect(() => {
+    let locationSubscription: Location.LocationSubscription | null = null;
+
+    (async () => {
+      if (!cachedLocation) return; // Wait for cached location first
+
+      // Watch location updates for live tracking
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        return;
+      }
+
+      locationSubscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 5000, // Update every 5 seconds
+          distanceInterval: 10, // Or when user moves 10 meters
+        },
+        (newLocation) => {
+          setUserLocation({
+            latitude: newLocation.coords.latitude,
+            longitude: newLocation.coords.longitude,
+          });
+        }
+      );
+    })();
+
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+    };
+  }, [cachedLocation]);
+
+  // Show loading only if no cached location
+  if (!initialRegion || locationLoading) {
+    return (
+      <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }]}>
+        <MaterialIcons name="location-searching" size={48} color={colors.icon} />
+        <ThemedText style={{ marginTop: 16 }}>Loading map...</ThemedText>
+      </View>
+    );
+  }
+
   return (
     <MapView
       style={StyleSheet.absoluteFill}
       provider={PROVIDER_GOOGLE}
-      initialRegion={region}
-    />
+      initialRegion={initialRegion}
+      showsUserLocation={true}
+      showsMyLocationButton={true}
+    >
+      {userLocation && (
+        <Marker
+          coordinate={userLocation}
+          title="You are here"
+          pinColor="blue"
+        />
+      )}
+    </MapView>
   );
 }
 

@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { Colors, getCategorySemanticColor, getCategorySemanticBg } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { usePosts } from '@/contexts/posts-context';
 import { Post } from '@/services/api';
@@ -16,13 +16,7 @@ const CATEGORY_ICONS: Record<Post['category'], string> = {
   'accessibility resources': 'accessible',
 };
 
-const CATEGORY_COLORS: Record<Post['category'], string> = {
-  alert: '#ff4444',
-  warning: '#ffaa00',
-  help: '#0a7ea4',
-  resources: '#4caf50',
-  'accessibility resources': '#9c27b0',
-};
+// Derive colors from semantic theme tokens instead of hardcoded values.
 
 function formatTimestamp(timestamp: string): string {
   const date = new Date(timestamp);
@@ -44,22 +38,36 @@ function formatTimestamp(timestamp: string): string {
 }
 
 function FeedItem({ post }: { post: Post }) {
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const categoryColor = CATEGORY_COLORS[post.category];
+  const mode = (colorScheme === 'dark' ? 'dark' : 'light');
+  const categoryColor = getCategorySemanticColor(mode, post.category);
+  const categoryBg = getCategorySemanticBg(mode, post.category);
   const categoryIcon = CATEGORY_ICONS[post.category];
+
+  const onMyWayCount = post.onMyWayBy?.length || 0;
+  const isResolved = !!post.resolvedBy;
+  const resolvedColor = colors.semantic.resources; // use resources semantic for resolved state
+  const resolvedBg = colors.semanticBg.resources;
+  const onMyWayColor = colors.semantic.help; // help semantic for on my way state
+  const onMyWayBg = colors.semanticBg.help;
 
   return (
     <TouchableOpacity
       style={[
         styles.feedItem,
         {
-          backgroundColor: colors.background,
+          backgroundColor: colors.surface,
           borderLeftColor: categoryColor,
+          shadowColor: colorScheme === 'dark' ? '#000' : '#000',
         },
-      ]}>
+      ]}
+      onPress={() => router.push(`/post-detail?id=${post.id}`)}
+      accessibilityRole="button"
+      accessibilityLabel={`View details for ${post.title}`}>
       <View style={styles.feedItemHeader}>
-        <View style={[styles.feedItemIconContainer, { backgroundColor: categoryColor + '20' }]}>
+        <View style={[styles.feedItemIconContainer, { backgroundColor: categoryBg }] }>
           <MaterialIcons name={categoryIcon as any} size={20} color={categoryColor} />
         </View>
         <View style={styles.feedItemContent}>
@@ -67,16 +75,25 @@ function FeedItem({ post }: { post: Post }) {
             <ThemedText type="defaultSemiBold" style={styles.feedItemTitle}>
               {post.title}
             </ThemedText>
-            <View style={[styles.categoryBadge, { backgroundColor: categoryColor + '20' }]}>
+            <View style={[styles.categoryBadge, { backgroundColor: categoryBg }]}>
               <ThemedText style={[styles.categoryBadgeText, { color: categoryColor }]}>
                 {post.category}
               </ThemedText>
             </View>
             {post.subcategory ? (
-              <View style={[styles.categoryBadge, { backgroundColor: categoryColor + '10' }]}>
+              <View style={[styles.categoryBadge, { backgroundColor: categoryBg }]}>
                 <ThemedText style={[styles.categoryBadgeText, { color: categoryColor }]}>
                   {post.subcategory}
                 </ThemedText>
+              </View>
+            ) : null}
+            {isResolved ? (
+              <View style={[styles.statusBadge, { backgroundColor: resolvedBg }]}> 
+                <ThemedText style={[styles.statusBadgeText, { color: resolvedColor }]}>Resolved</ThemedText>
+              </View>
+            ) : onMyWayCount > 0 ? (
+              <View style={[styles.statusBadge, { backgroundColor: onMyWayBg }]}> 
+                <ThemedText style={[styles.statusBadgeText, { color: onMyWayColor }]}>On My Way ({onMyWayCount})</ThemedText>
               </View>
             ) : null}
           </View>
@@ -199,6 +216,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     textTransform: 'capitalize',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   loadingContainer: {
     padding: 32,
