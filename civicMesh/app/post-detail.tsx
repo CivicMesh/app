@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -23,7 +23,7 @@ import { ThemedText } from '@/components/themed-text';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, getCategorySemanticColor, getCategorySemanticBg } from '@/constants/theme';
 import { usePosts } from '@/contexts/posts-context';
-import { Post, markOnMyWay, resolvePost } from '@/services/api';
+import { Post, getPost, markOnMyWay, resolvePost } from '@/services/api';
 import { useAuth } from '@/contexts/auth-context';
 
 // Category colors now derived from semantic tokens in theme.
@@ -79,7 +79,69 @@ export default function PostDetailScreen() {
   const fromParam = Array.isArray(params.from) ? params.from[0] : params.from;
   const cameFromMap = fromParam === 'map';
 
-  const post = posts.find((p) => p.id === params.id);
+  const initialPost = posts.find((p) => p.id === params.id);
+
+  const [post, setPost] = useState<Post | null>(initialPost ?? null);
+  const [postLoading, setPostLoading] = useState(!initialPost);
+  const [postError, setPostError] = useState<string | null>(null);
+  // Sync context updates only if we don't already have a newer fetched version
+  useEffect(() => {
+    if (!initialPost) {
+      setPost(null);
+      return;
+    }
+    // If we have a fetched post, avoid overwriting with an older snapshot
+    if (post && post.id === initialPost.id) {
+      // Merge simple mutable fields (onMyWayBy, resolution* etc.) without triggering full reset
+      setPost((prev) => prev ? { ...prev, ...initialPost } : initialPost);
+    } else {
+      setPost(initialPost);
+    }
+  }, [initialPost?.id, initialPost]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPost = async () => {
+      if (!params.id) return;
+
+      // If we already have initial data, do a background refresh without triggering full-screen loader
+      const hasInitial = Boolean(initialPost);
+      if (!hasInitial) {
+        setPostLoading(true);
+      }
+      setPostError(null);
+
+      try {
+        const response = await getPost(params.id);
+        if (!isMounted) return;
+        if (response.success && response.data) {
+          if (response.data) {
+            setPost((prev) => (prev ? { ...prev, ...response.data! } : response.data!));
+          }
+          updatePost(response.data.id, response.data);
+        } else {
+          // Only show error if we had no initial data
+          if (!hasInitial) {
+            setPostError(response.error || 'Unable to load this post right now.');
+          }
+        }
+      } catch (err) {
+        if (isMounted && !hasInitial) {
+          console.error('Error fetching post', err);
+          setPostError('Unable to load this post right now.');
+        }
+      } finally {
+        if (isMounted && !hasInitial) {
+          setPostLoading(false);
+        }
+      }
+    };
+
+    loadPost();
+
+    return () => { isMounted = false; };
+  }, [params.id, updatePost, initialPost]);
 
   const [showResolveForm, setShowResolveForm] = useState(false);
   const [resolutionCode, setResolutionCode] = useState('');
@@ -110,6 +172,7 @@ export default function PostDetailScreen() {
       
       if (result.success && result.data) {
         updatePost(post.id, result.data);
+        setPost(result.data);
         Alert.alert('On My Way!', 'You have marked yourself as on the way to help with this post.', [
           { text: 'OK' },
         ]);
@@ -296,10 +359,12 @@ export default function PostDetailScreen() {
         resolutionCode: resolutionCode.trim(),
         resolutionPhotoUri,
         resolutionVideoUri: resolutionVideoUri || undefined,
+        postSnapshot: post,
       });
 
       if (result.success && result.data) {
         updatePost(post.id, result.data);
+        setPost(result.data);
         setLoading(false);
         Alert.alert('Success', 'Post has been marked as resolved!', [
           {
@@ -317,6 +382,27 @@ export default function PostDetailScreen() {
       Alert.alert('Error', 'An unexpected error occurred.');
     }
   };
+  if (postLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top, backgroundColor: colors.background, borderBottomColor: borderColor }]}> 
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => router.replace(cameFromMap ? '/map' : '/(tabs)')}
+            accessibilityRole="button"
+            accessibilityLabel="Go back">
+            <MaterialIcons name="arrow-back" size={24} color={colors.icon} />
+          </TouchableOpacity>
+          <ThemedText type="subtitle">Post Details</ThemedText>
+          <View style={styles.headerButton} />
+        </View>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.tint} />
+          <ThemedText style={styles.loadingText}>Loading post…</ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
 
   if (!post) {
     return (
@@ -334,7 +420,7 @@ export default function PostDetailScreen() {
         </View>
         <View style={styles.centered}>
           <MaterialIcons name="error-outline" size={64} color={colors.icon} />
-          <ThemedText style={styles.errorText}>Post not found</ThemedText>
+          <ThemedText style={styles.errorText}>{postError ?? 'Post not found'}</ThemedText>
         </View>
       </ThemedView>
     );
@@ -358,9 +444,15 @@ export default function PostDetailScreen() {
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Post Photo */}
-        {post.photoUri && (
-          <Image source={{ uri: post.photoUri }} style={styles.postPhoto} />
-        )}
+        {(() => {
+          const uri = post.photoUri;
+          const valid = typeof uri === 'string' && uri.length > 0 && /^(https?:\/\/|file:\/\/)/.test(uri);
+          if (!valid) {
+            console.log('Skipping render of invalid photoUri', uri);
+            return null;
+          }
+          return <Image accessibilityLabel="Post image" source={{ uri }} style={styles.postPhoto} />;
+        })()}
 
         {/* Post Info */}
         <View style={styles.postInfo}>
@@ -567,6 +659,11 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: 16,
     fontSize: 16,
+    opacity: 0.7,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
     opacity: 0.7,
   },
   scrollView: {

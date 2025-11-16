@@ -1,12 +1,70 @@
 import postsFixture from '@/mock-data/posts.json';
 import usersFixture from '@/mock-data/users.json';
+import { CATEGORIES, Subcategory } from '@/constants/categories';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { encode as b64encode } from 'base-64';
 
 // API Configuration
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://backend-51lr.onrender.com';
 
 // Set to true to use mock responses (no backend required)
 // Change to false or set EXPO_PUBLIC_USE_MOCK_API=false to use real backend
-const USE_MOCK_API = process.env.EXPO_PUBLIC_USE_MOCK_API !== 'false'; // Default to true for testing
+const USE_MOCK_API = process.env.EXPO_PUBLIC_USE_MOCK_API === 'true';
+
+const TOKEN_KEY = '@auth_token';
+
+/**
+ * Get stored auth token
+ */
+async function getAuthToken(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(TOKEN_KEY);
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return null;
+  }
+}
+
+/**
+ * Get auth headers with Basic Authentication
+ * Uses base-64 polyfill for React Native environments
+ */
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const username = 'testuser';
+  const password = 'testpassword';
+
+  let basicAuth: string;
+  try {
+    // Prefer polyfill encode
+    basicAuth = b64encode(`${username}:${password}`);
+  } catch (e) {
+    // Fallbacks if encode fails
+    // @ts-ignore
+    if (typeof btoa === 'function') {
+      // @ts-ignore
+      basicAuth = btoa(`${username}:${password}`);
+    } else if (typeof Buffer !== 'undefined') {
+      // Node fallback (web bundler scenario)
+      // @ts-ignore
+      basicAuth = Buffer.from(`${username}:${password}`, 'utf-8').toString('base64');
+    } else {
+      console.warn('No base64 encoder available; Basic Auth may fail');
+      basicAuth = '';
+    }
+  }
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    'Authorization': `Basic ${basicAuth}`,
+  };
+
+  console.log('Auth headers constructed:', {
+    hasAuth: Boolean(basicAuth),
+    preview: basicAuth ? basicAuth.substring(0, 10) + '…' : 'none',
+  });
+
+  return headers;
+}
 
 type LoginCredentials = {
   email: string;
@@ -87,12 +145,11 @@ export async function login(credentials: LoginCredentials): Promise<ApiResponse<
   }
 
   try {
-    const queryParams = new URLSearchParams({
-      email: credentials.email,
-      password: credentials.password,
-    });
+    const queryParams = new URLSearchParams();
+    queryParams.set('username', credentials.email);
+    queryParams.set('password', credentials.password);
 
-    const response = await fetch(`${API_BASE_URL}/login?${queryParams}`, {
+    const response = await fetch(`${API_BASE_URL}/login/?${queryParams.toString()}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -104,14 +161,22 @@ export async function login(credentials: LoginCredentials): Promise<ApiResponse<
     if (!response.ok) {
       return {
         success: false,
-        error: data.message || data.error || 'Login failed',
+        error: data.detail || data.message || data.error || 'Login failed',
       };
     }
 
+    // Backend returns { message: "Login successful", user_id: number }
+    // Create a user object from the response
+    const userId = data.user_id || data.id;
+    const userData = {
+      id: String(userId),
+      email: credentials.email,
+    };
+
     return {
       success: true,
-      data: data.user || data,
-      token: data.token || data.accessToken,
+      data: userData,
+      token: `user-${userId}-${Date.now()}`, // Generate a session token since backend doesn't provide one
     };
   } catch (error) {
     return {
@@ -178,12 +243,21 @@ export async function signup(signupData: SignupData): Promise<ApiResponse<any>> 
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/signup`, {
+    // Transform camelCase to snake_case for backend
+    const backendPayload = {
+      email: signupData.email,
+      password: signupData.password,
+      first_name: signupData.firstName,
+      last_name: signupData.lastName,
+      username: signupData.email, // Use email as username
+    };
+
+    const response = await fetch(`${API_BASE_URL}/users/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(signupData),
+      body: JSON.stringify(backendPayload),
     });
 
     const data = await response.json();
@@ -191,14 +265,23 @@ export async function signup(signupData: SignupData): Promise<ApiResponse<any>> 
     if (!response.ok) {
       return {
         success: false,
-        error: data.message || data.error || 'Signup failed',
+        error: data.detail || data.message || data.error || 'Signup failed',
       };
     }
 
+    // Backend returns { id, first_name, last_name, username, password (hashed) }
+    // Transform snake_case response to camelCase for our app
+    const userData = {
+      id: String(data.id),
+      email: data.username || signupData.email,
+      firstName: data.first_name || signupData.firstName,
+      lastName: data.last_name || signupData.lastName,
+    };
+
     return {
       success: true,
-      data: data.user || data,
-      token: data.token || data.accessToken,
+      data: userData,
+      token: `user-${data.id}-${Date.now()}`, // Generate a session token since backend doesn't provide one
     };
   } catch (error) {
     return {
@@ -248,10 +331,243 @@ export type Post = {
   resolutionPhotoUri?: string;
   resolutionVideoUri?: string;
   resolvedAt?: string;
+  is_active?: boolean;
+  image_url?: string;
+  body?: string;
+  [key: string]: any;
 };
 
 const postsFixtureData = postsFixture as Post[];
 let mockPostsStorage: Post[] = postsFixtureData.map((post) => ({ ...post }));
+
+function toBackendCategory(category: Post['category']): string {
+  switch (category) {
+    case 'alert':
+      return 'Alert';
+    case 'warning':
+      return 'Warning';
+    case 'resources':
+      return 'Resources';
+    case 'accessibility resources':
+      return 'Accessibility Resources';
+    case 'help':
+    default:
+      return 'Help';
+  }
+}
+
+function fromBackendCategory(category: unknown): Post['category'] {
+  const normalized = (typeof category === 'string' ? category : '').trim().toLowerCase();
+  switch (normalized) {
+    case 'alert':
+      return 'alert';
+    case 'warning':
+      return 'warning';
+    case 'resources':
+      return 'resources';
+    case 'accessibility resources':
+    case 'accessibility':
+      return 'accessibility resources';
+    case 'help':
+    default:
+      return 'help';
+  }
+}
+
+function toBackendSubcategory(category: Post['category'], subcategoryId?: string): string | null {
+  if (!subcategoryId) {
+    return null;
+  }
+
+  const categoryConfig = CATEGORIES.find((entry) => entry.value === category);
+  if (!categoryConfig) {
+    return subcategoryId;
+  }
+
+  const matched = categoryConfig.subcategories.find((sub: Subcategory) => sub.id === subcategoryId);
+  return matched?.label ?? subcategoryId;
+}
+
+function fromBackendSubcategory(category: Post['category'], raw: unknown): string | undefined {
+  if (typeof raw !== 'string' || !raw.trim()) {
+    return undefined;
+  }
+
+  const normalizedRaw = raw.trim().toLowerCase();
+  const categoryConfig = CATEGORIES.find((entry) => entry.value === category);
+  const matched = categoryConfig?.subcategories.find((sub) => sub.label.toLowerCase() === normalizedRaw || sub.id === normalizedRaw);
+  return matched?.id ?? raw;
+}
+
+function normalizePost(raw: any): Post {
+  if (!raw) {
+    return {
+      id: '',
+      title: '',
+      category: 'help',
+      description: '',
+      latitude: 0,
+      longitude: 0,
+      userId: 'unknown',
+      timestamp: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      photoUri: '',
+      onMyWayBy: [],
+    };
+  }
+
+  const id = raw.id ?? raw.slug ?? raw.pk ?? raw.uuid ?? raw._id ?? raw.postId;
+  const createdAt = raw.created_at || raw.createdAt || raw.timestamp || new Date().toISOString();
+  const timestamp = raw.updated_at || raw.timestamp || createdAt;
+  const latitude = Number(raw.latitude);
+  const longitude = Number(raw.longitude);
+  const userId = raw.user_id ?? raw.userId ?? raw.user?.id ?? raw.user ?? 'unknown';
+  const resolvedBy = raw.resolved_by ?? raw.resolvedBy;
+  const normalizedCategory = fromBackendCategory(raw.category);
+  // Helper to build image URL if backend returns an ID or numeric string
+  const buildImageUrl = (val: any): string => {
+    if (val == null) return '';
+    const str = String(val).trim();
+    if (!str) return '';
+    // If already a full URI or data URI
+    if (/^(https?:\/\/|data:|file:\/)/i.test(str)) return str;
+    // If purely numeric or UUID-like without extension, treat as backend id
+    if (/^\d+$/.test(str)) {
+      // Embed basic auth credentials for image fetch (RN Image cannot send headers)
+      const username = 'testuser';
+      const password = 'testpassword';
+      const baseHost = API_BASE_URL.replace(/^https?:\/\//, '');
+      return `https://${username}:${password}@${baseHost}/image/${str}`;
+    }
+    return str; // fallback as provided
+  };
+
+  const normalizedPost: Post = {
+    id: String(id ?? ''),
+    title: raw.title ?? '',
+  category: normalizedCategory,
+  subcategory: fromBackendSubcategory(normalizedCategory, raw.subcategory ?? raw.sub_category),
+    description: raw.body ?? raw.description ?? '',
+    latitude: Number.isFinite(latitude) ? latitude : 0,
+    longitude: Number.isFinite(longitude) ? longitude : 0,
+    userId: typeof userId === 'number' ? String(userId) : String(userId ?? 'unknown'),
+    timestamp: new Date(timestamp).toISOString(),
+    createdAt: new Date(createdAt).toISOString(),
+    photoUri: buildImageUrl(raw.image_url ?? raw.photoUri ?? raw.imageUrl ?? ''),
+    videoUri: raw.video_url ?? raw.videoUri ?? undefined,
+    onMyWayBy: Array.isArray(raw.on_my_way_by)
+      ? raw.on_my_way_by.map((entry: any) => String(entry))
+      : raw.onMyWayBy ?? [],
+    resolvedBy: resolvedBy ? String(resolvedBy) : raw.resolvedBy,
+    resolutionCode: raw.resolution_code ?? raw.resolutionCode,
+    resolutionPhotoUri: raw.resolution_photo_url ?? raw.resolutionPhotoUri,
+    resolutionVideoUri: raw.resolution_video_url ?? raw.resolutionVideoUri,
+    resolvedAt: raw.resolved_at ?? raw.resolvedAt,
+    is_active: raw.is_active ?? raw.isActive,
+    image_url: raw.image_url,
+    body: raw.body,
+  };
+
+  return normalizedPost;
+}
+
+/**
+ * Upload an image file to backend for a post
+ * @param userId User performing upload
+ * @param postId Related post id
+ * @param localUri React Native file URI
+ */
+export async function uploadImage(userId: string | number, postId: string | number, localUri: string): Promise<ApiResponse<{ imageUrl: string; raw: any }>> {
+  // Basic checks
+  if (!localUri || !postId) {
+    return { success: false, error: 'Missing image or post id' };
+  }
+
+  try {
+    const headers = await getAuthHeaders();
+    // Remove explicit content-type so fetch sets multipart boundary
+    const { ['Content-Type']: _omit, ...restHeaders } = headers as Record<string, string>;
+
+    const formData = new FormData();
+    // Infer file extension
+    const extMatch = localUri.match(/\.([a-zA-Z0-9]+)(?:\?|$)/);
+    const ext = extMatch ? extMatch[1].toLowerCase() : 'jpg';
+    const mime = ext === 'png' ? 'image/png' : ext === 'jpeg' || ext === 'jpg' ? 'image/jpeg' : 'application/octet-stream';
+    // React Native's FormData accepts a file object with uri/name/type; cast to any to satisfy TS in web tooling
+    formData.append('file', {
+      uri: localUri,
+      name: `upload.${ext}`,
+      type: mime,
+    } as any);
+
+    const url = `${API_BASE_URL}/upload-image/${userId}?post_id=${postId}`;
+    console.log('Uploading image:', { url, localUri });
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: restHeaders, // no content-type override
+      body: formData,
+    });
+
+    let data: any = null;
+    try { data = await response.json(); } catch { /* non-JSON response */ }
+    if (!response.ok) {
+      return { success: false, error: data?.detail || data?.message || data?.error || `Image upload failed (${response.status})` };
+    }
+
+    // Try to derive image URL/id from response
+    const imageId = data?.image_id ?? data?.id ?? data?.imageId;
+    const directUrl = data?.image_url ?? data?.url;
+    const imageUrl = directUrl ? String(directUrl) : (imageId ? `${API_BASE_URL}/image/${imageId}` : '');
+
+    return { success: true, data: { imageUrl, raw: data } };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Network error uploading image' };
+  }
+}
+
+function buildPostPayload(params: {
+  title: string;
+  description: string;
+  userId?: string;
+  category: Post['category'];
+  subcategory?: string;
+  createdAt?: string;
+  latitude: number;
+  longitude: number;
+  photoUri?: string;
+  isActive?: boolean;
+  videoUri?: string;
+}): Record<string, any> {
+  const {
+    title,
+    description,
+    userId,
+    category,
+    subcategory,
+    createdAt,
+    latitude,
+    longitude,
+    photoUri,
+    isActive,
+    videoUri,
+  } = params;
+
+  const parsedUserId = Number(userId);
+
+  return {
+    title,
+    body: description,
+    user_id: Number.isFinite(parsedUserId) ? parsedUserId : userId,
+    category: toBackendCategory(category),
+    subcategory: toBackendSubcategory(category, subcategory) ?? null,
+    created_at: createdAt ?? new Date().toISOString(),
+    latitude,
+    longitude,
+    image_url: photoUri ?? null,
+    video_url: videoUri ?? null,
+    is_active: typeof isActive === 'boolean' ? isActive : true,
+  };
+}
 
 /**
  * Mock post function for testing without backend
@@ -313,12 +629,25 @@ export async function postForHelp(postData: PostForHelpData): Promise<ApiRespons
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/posts`, {
+    const payload = buildPostPayload({
+      title: postData.title,
+      description: postData.description,
+      userId: postData.userId,
+      category: postData.category,
+      subcategory: postData.subcategory,
+      createdAt: new Date().toISOString(),
+      latitude: postData.latitude,
+      longitude: postData.longitude,
+      photoUri: postData.photoUri,
+      isActive: true,
+      videoUri: postData.videoUri,
+    });
+
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/posts`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(postData),
+      headers,
+      body: JSON.stringify(payload),
     });
 
     const data = await response.json();
@@ -330,10 +659,20 @@ export async function postForHelp(postData: PostForHelpData): Promise<ApiRespons
       };
     }
 
-    return {
-      success: true,
-      data: data.post || data,
-    };
+    let created = normalizePost(data.post || data);
+
+    // Upload image if local URI (starts with file:)
+    if (postData.photoUri && /^file:\/\//.test(postData.photoUri)) {
+      const uploadResult = await uploadImage(postData.userId || created.userId, created.id, postData.photoUri);
+      if (uploadResult.success && uploadResult.data?.imageUrl) {
+        // Replace photo URI and optionally refetch
+        created.photoUri = uploadResult.data.imageUrl;
+      } else {
+        console.warn('Image upload failed:', uploadResult.error);
+      }
+    }
+
+    return { success: true, data: created };
   } catch (error) {
     return {
       success: false,
@@ -364,11 +703,10 @@ export async function getPosts(): Promise<ApiResponse<Post[]>> {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/posts`, {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/posts/active/`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     const data = await response.json();
@@ -381,13 +719,54 @@ export async function getPosts(): Promise<ApiResponse<Post[]>> {
     }
 
     // Sort by timestamp (newest first)
-    const posts = (data.posts || data || []).sort((a: Post, b: Post) => {
-      return new Date(b.timestamp || b.createdAt).getTime() - new Date(a.timestamp || a.createdAt).getTime();
-    });
+    const possibleCollections = [data?.posts, data?.results, data?.data, data];
+    const rawPosts = (possibleCollections.find((collection): collection is any[] => Array.isArray(collection)) ?? []) as any[];
+    const posts = rawPosts
+      .map((raw) => normalizePost(raw))
+      .sort((a: Post, b: Post) => {
+        return new Date(b.timestamp || b.createdAt).getTime() - new Date(a.timestamp || a.createdAt).getTime();
+      });
 
     return {
       success: true,
       data: posts,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error occurred',
+    };
+  }
+}
+
+export async function getPost(postId: string): Promise<ApiResponse<Post>> {
+  if (USE_MOCK_API) {
+    const found = mockPostsStorage.find((post) => post.id === postId);
+    if (!found) {
+      return { success: false, error: 'Post not found' };
+    }
+    return { success: true, data: found };
+  }
+
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+      method: 'GET',
+      headers,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.message || data.error || 'Failed to fetch post',
+      };
+    }
+
+    return {
+      success: true,
+      data: normalizePost(data.post || data),
     };
   } catch (error) {
     return {
@@ -437,11 +816,10 @@ export async function markOnMyWay(postId: string, userId: string): Promise<ApiRe
   }
 
   try {
+    const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}/posts/${postId}/on-my-way`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({ userId }),
     });
 
@@ -472,6 +850,7 @@ type ResolvePostData = {
   resolutionCode: string;
   resolutionPhotoUri: string;
   resolutionVideoUri?: string;
+  postSnapshot: Post;
 };
 
 /**
@@ -494,6 +873,7 @@ async function mockResolvePost(data: ResolvePostData): Promise<ApiResponse<Post>
   post.resolutionPhotoUri = data.resolutionPhotoUri;
   post.resolutionVideoUri = data.resolutionVideoUri;
   post.resolvedAt = new Date().toISOString();
+  post.is_active = false;
 
   return {
     success: true,
@@ -512,26 +892,82 @@ export async function resolvePost(data: ResolvePostData): Promise<ApiResponse<Po
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/posts/${data.postId}/resolve`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
+    let resolutionPhotoUri = data.resolutionPhotoUri;
+    // Upload resolution image if local
+    if (resolutionPhotoUri && /^file:\/\//.test(resolutionPhotoUri)) {
+      const uploadResult = await uploadImage(data.userId, data.postId, resolutionPhotoUri);
+      if (uploadResult.success && uploadResult.data?.imageUrl) {
+        resolutionPhotoUri = uploadResult.data.imageUrl;
+      } else {
+        console.warn('Resolution image upload failed:', uploadResult.error);
+      }
+    }
+
+    const payload = buildPostPayload({
+      title: data.postSnapshot.title,
+      description: data.postSnapshot.description,
+      userId: data.postSnapshot.userId ?? data.userId,
+      category: data.postSnapshot.category,
+      subcategory: data.postSnapshot.subcategory,
+      createdAt: data.postSnapshot.createdAt ?? data.postSnapshot.timestamp,
+      latitude: data.postSnapshot.latitude,
+      longitude: data.postSnapshot.longitude,
+      photoUri: resolutionPhotoUri ?? data.postSnapshot.photoUri,
+      isActive: false,
+      videoUri: data.resolutionVideoUri ?? data.postSnapshot.videoUri,
+    });
+
+    const headers = await getAuthHeaders();
+    const requestBody = {
+      ...payload,
+      resolution_code: data.resolutionCode,
+      resolved_by: data.userId,
+  resolution_photo_url: resolutionPhotoUri,
+      resolution_video_url: data.resolutionVideoUri ?? null,
+    };
+    
+    console.log('Resolve Post Request:', {
+      url: `${API_BASE_URL}/posts/${data.postId}`,
+      headers,
+      body: requestBody,
+    });
+    
+    const response = await fetch(`${API_BASE_URL}/posts/${data.postId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(requestBody),
     });
 
     const responseData = await response.json();
+    
+    console.log('Resolve Post Response:', {
+      status: response.status,
+      ok: response.ok,
+      data: responseData,
+    });
 
     if (!response.ok) {
       return {
         success: false,
-        error: responseData.message || responseData.error || 'Failed to resolve post',
+        error: responseData.detail || responseData.message || responseData.error || 'Failed to resolve post',
       };
     }
 
+    const normalized = normalizePost(responseData.post || responseData);
+    const hydrated: Post = {
+      ...data.postSnapshot,
+      ...normalized,
+      resolvedBy: data.userId,
+      resolutionCode: data.resolutionCode,
+      resolutionPhotoUri: data.resolutionPhotoUri,
+      resolutionVideoUri: data.resolutionVideoUri,
+      resolvedAt: new Date().toISOString(),
+      is_active: false,
+    };
+
     return {
       success: true,
-      data: responseData.post || responseData,
+      data: hydrated,
     };
   } catch (error) {
     return {

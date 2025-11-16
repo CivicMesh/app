@@ -67,6 +67,13 @@ export default function HomeScreen() {
     }, [])
   );
 
+  // Silently refresh posts in background when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refreshPosts(true);
+    }, [refreshPosts])
+  );
+
   return (
     <ThemedView style={styles.container}>
       <HomeHeader onMenuPress={handleMenuPress} onRefresh={handleRefresh} isRefreshing={refreshing} />

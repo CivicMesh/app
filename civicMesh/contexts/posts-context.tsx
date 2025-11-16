@@ -4,7 +4,7 @@ import { getPosts, Post } from '@/services/api';
 type PostsContextType = {
   posts: Post[];
   isLoading: boolean;
-  refreshPosts: () => Promise<void>;
+  refreshPosts: (silent?: boolean) => Promise<void>;
   addPost: (post: Post) => void;
   updatePost: (postId: string, updates: Partial<Post>) => void;
 };
@@ -15,9 +15,11 @@ export function PostsProvider({ children }: { children: ReactNode }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshPosts = async () => {
+  const refreshPosts = async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) {
+        setIsLoading(true);
+      }
       const response = await getPosts();
       if (response.success && response.data) {
         // Sort by timestamp (newest first)
@@ -29,7 +31,9 @@ export function PostsProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error fetching posts:', error);
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   };
 

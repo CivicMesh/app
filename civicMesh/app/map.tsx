@@ -135,9 +135,17 @@ export default function MapScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const iconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
   const borderColor = colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-  const { posts } = usePosts();
+  const { posts, refreshPosts } = usePosts();
   const { selectedCategories, selectedSubcategories, hasActiveFilters } = useFilters('map');
   const [filtersVisible, setFiltersVisible] = useState(false);
+
+  // Refresh posts silently when map screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      // Silent refresh in background without blocking UI
+      refreshPosts(true);
+    }, [refreshPosts])
+  );
 
   const filteredPosts = useMemo(() => {
     const categorySet = new Set(selectedCategories);
