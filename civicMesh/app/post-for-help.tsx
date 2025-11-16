@@ -22,7 +22,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
+import { Colors, getCategorySemanticBg, getCategorySemanticColor } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { usePosts } from '@/contexts/posts-context';
 import { postForHelp } from '@/services/api';
@@ -30,6 +30,18 @@ import { CATEGORIES, Category, findCategory } from '@/constants/categories';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 // Categories now come from constants with subcategories
+
+function getReadableTextColor(hexColor: string): string {
+  const normalized = hexColor.replace('#', '');
+  if (normalized.length !== 6) {
+    return '#FFFFFF';
+  }
+  const r = parseInt(normalized.substring(0, 2), 16) / 255;
+  const g = parseInt(normalized.substring(2, 4), 16) / 255;
+  const b = parseInt(normalized.substring(4, 6), 16) / 255;
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance > 0.6 ? '#000000' : '#FFFFFF';
+}
 
 export default function PostForHelpScreen() {
   const [title, setTitle] = useState('');
@@ -49,8 +61,8 @@ export default function PostForHelpScreen() {
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   const colors = Colors[scheme];
   const iconColor = scheme === 'dark' ? '#FFFFFF' : '#000000';
-  const accentColor = scheme === 'dark' ? colors.tint : '#000000';
-  const accentForeground = scheme === 'dark' ? '#000000' : '#FFFFFF';
+  const accentColor = colors.brand.accent;
+  const accentForeground = colors.brand.accentForeground;
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -389,42 +401,47 @@ export default function PostForHelpScreen() {
             <ThemedView style={styles.inputContainer}>
               <ThemedText style={styles.label}>Category *</ThemedText>
               <View style={styles.categoryContainer}>
-                {CATEGORIES.map((cat) => (
-                  <TouchableOpacity
-                    key={cat.value}
-                    style={[
-                      styles.categoryButton,
-                      {
-                        backgroundColor:
-                          category === cat.value
-                            ? accentColor
-                            : scheme === 'dark'
-                              ? '#2a2a2a'
-                              : '#f5f5f5',
-                        borderColor: category === cat.value ? accentColor : scheme === 'dark' ? '#444' : '#ddd',
-                      },
-                    ]}
-                    onPress={() => {
-                      setCategory(cat.value);
-                      setSubcategory(null);
-                    }}
-                    disabled={loading}>
-                    <MaterialIcons
-                      name={cat.icon as any}
-                      size={20}
-                      color={category === cat.value ? accentForeground : colors.text}
-                    />
-                    <Text
+                {CATEGORIES.map((cat) => {
+                  const isSelected = category === cat.value;
+                  const categoryColor = getCategorySemanticColor(scheme, cat.value);
+                  const categoryBg = getCategorySemanticBg(scheme, cat.value);
+                  const selectedTextColor = getReadableTextColor(categoryColor);
+                  return (
+                    <TouchableOpacity
+                      key={cat.value}
                       style={[
-                        styles.categoryButtonText,
+                        styles.categoryButton,
                         {
-                          color: category === cat.value ? accentForeground : colors.text,
+                          backgroundColor: isSelected ? categoryColor : categoryBg,
+                          borderColor: isSelected
+                            ? categoryColor
+                            : colorScheme === 'dark'
+                              ? colors.border
+                              : colors.borderMuted,
                         },
-                      ]}>
-                      {cat.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      ]}
+                      onPress={() => {
+                        setCategory(cat.value);
+                        setSubcategory(null);
+                      }}
+                      disabled={loading}>
+                      <MaterialIcons
+                        name={cat.icon as any}
+                        size={20}
+                        color={isSelected ? selectedTextColor : categoryColor}
+                      />
+                      <Text
+                        style={[
+                          styles.categoryButtonText,
+                          {
+                            color: isSelected ? selectedTextColor : colors.text,
+                          },
+                        ]}>
+                        {cat.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </ThemedView>
 
@@ -433,42 +450,46 @@ export default function PostForHelpScreen() {
               <ThemedView style={styles.inputContainer}>
                 <ThemedText style={styles.label}>Subcategory *</ThemedText>
                 <View style={styles.categoryContainer}>
-                  {findCategory(category)?.subcategories.map((sub) => (
-                    <TouchableOpacity
-                      key={sub.id}
-                      style={[
-                        styles.categoryButton,
-                        {
-                          backgroundColor:
-                            subcategory === sub.id
-                              ? accentColor
-                              : scheme === 'dark'
-                                ? '#2a2a2a'
-                                : '#f5f5f5',
-                          borderColor: subcategory === sub.id ? accentColor : scheme === 'dark' ? '#444' : '#ddd',
-                        },
-                      ]}
-                      onPress={() => setSubcategory(sub.id)}
-                      disabled={loading}>
-                      <MaterialIcons
-                        name={
-                          // try to reuse same icon as category for now
-                          (CATEGORIES.find((c) => c.value === category)?.icon || 'label') as any
-                        }
-                        size={20}
-                        color={subcategory === sub.id ? accentForeground : colors.text}
-                      />
-                      <Text
+                  {findCategory(category)?.subcategories.map((sub) => {
+                    const subSelected = subcategory === sub.id;
+                    const categoryColor = getCategorySemanticColor(scheme, category);
+                    const categoryBg = getCategorySemanticBg(scheme, category);
+                    const selectedTextColor = getReadableTextColor(categoryColor);
+                    return (
+                      <TouchableOpacity
+                        key={sub.id}
                         style={[
-                          styles.categoryButtonText,
+                          styles.categoryButton,
                           {
-                            color: subcategory === sub.id ? accentForeground : colors.text,
+                            backgroundColor: subSelected ? categoryColor : categoryBg,
+                            borderColor: subSelected
+                              ? categoryColor
+                              : colorScheme === 'dark'
+                                ? colors.border
+                                : colors.borderMuted,
                           },
-                        ]}>
-                        {sub.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        ]}
+                        onPress={() => setSubcategory(sub.id)}
+                        disabled={loading}>
+                        <MaterialIcons
+                          name={
+                            (CATEGORIES.find((c) => c.value === category)?.icon || 'label') as any
+                          }
+                          size={20}
+                          color={subSelected ? selectedTextColor : categoryColor}
+                        />
+                        <Text
+                          style={[
+                            styles.categoryButtonText,
+                            {
+                              color: subSelected ? selectedTextColor : colors.text,
+                            },
+                          ]}>
+                          {sub.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </ThemedView>
             )}

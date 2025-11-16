@@ -56,8 +56,8 @@ function FeedItem({ post, showDescription }: FeedItemProps) {
   const isResolved = !!post.resolvedBy;
   const resolvedColor = colors.semantic.resources;
   const resolvedBg = colors.semanticBg.resources;
-  const onMyWayColor = colors.semantic.help;
-  const onMyWayBg = colors.semanticBg.help;
+  const onMyWayColor = mode === 'dark' ? '#FFFFFF' : '#000000';
+  const onMyWayBg = mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)';
 
   return (
     <TouchableOpacity

@@ -10,7 +10,7 @@ import { Platform } from 'react-native';
  * LegacyColors preserves the previous structure. To revert: replace `export const Colors = NewColors;`
  * with `export const Colors = LegacyColors;` or delete NewColors and rename LegacyColors to Colors.
  */
-const tintColorLight = '#0a7ea4';
+const tintColorLight = '#000000';
 const tintColorDark = '#fff';
 
 export const LegacyColors = {
@@ -34,11 +34,18 @@ export const LegacyColors = {
 
 // Original palette tokens (classic CivicMesh)
 // Core brand & surfaces
-const Brand = {
-  primary: '#0A7EA4',
+const BrandLight = {
+  primary: '#000000',
   primaryForeground: '#FFFFFF',
-  accent: '#0A7EA4',
+  accent: '#000000',
   accentForeground: '#FFFFFF',
+};
+
+const BrandDark = {
+  primary: '#FFFFFF',
+  primaryForeground: '#000000',
+  accent: '#FFFFFF',
+  accentForeground: '#000000',
 };
 
 // Surfaces & elevations
@@ -66,7 +73,15 @@ const SurfacesDark = {
 };
 
 // Semantic category colors (matching original badge hues)
-const Semantic = {
+const SemanticLight = {
+  alert: '#FF4444',
+  warning: '#FFAA00',
+  help: '#0A7EA4',
+  resources: '#4CAF50',
+  accessibility: '#9C27B0',
+};
+
+const SemanticDark = {
   alert: '#FF4444',
   warning: '#FFAA00',
   help: '#0A7EA4',
@@ -108,15 +123,15 @@ export const Colors = {
   light: {
     // Legacy compatibility
     text: TextLight.textPrimary,
-    tint: Brand.accent,
+    tint: BrandLight.accent,
     icon: '#687076',
     tabIconDefault: '#687076',
-    tabIconSelected: Brand.accent,
+    tabIconSelected: BrandLight.accent,
     // New tokens
-    brand: Brand,
+    brand: BrandLight,
     ...SurfacesLight,
     ...TextLight,
-    semantic: Semantic,
+    semantic: SemanticLight,
     semanticBg: SemanticBgLight,
   },
   dark: {
@@ -125,10 +140,10 @@ export const Colors = {
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: '#FFFFFF',
-    brand: Brand,
+    brand: BrandDark,
     ...SurfacesDark,
     ...TextDark,
-    semantic: Semantic,
+    semantic: SemanticDark,
     semanticBg: SemanticBgDark,
   },
 };
@@ -137,27 +152,23 @@ export const Colors = {
  * Helper to safely obtain a semantic color by category key.
  * Accepts the Post category string (including 'accessibility resources').
  */
+type SemanticKey = 'alert' | 'warning' | 'help' | 'resources' | 'accessibility';
+
+const CATEGORY_TO_SEMANTIC: Record<string, SemanticKey> = {
+  alert: 'alert',
+  warning: 'warning',
+  help: 'help',
+  resources: 'resources',
+  'accessibility resources': 'accessibility',
+};
+
 export function getCategorySemanticColor(mode: 'light' | 'dark', category: string): string {
-  const map: Record<string, keyof typeof Semantic> = {
-    alert: 'alert',
-    warning: 'warning',
-    help: 'help',
-    resources: 'resources',
-    'accessibility resources': 'accessibility',
-  };
-  const semanticKey = map[category] || 'help';
+  const semanticKey = CATEGORY_TO_SEMANTIC[category] || 'help';
   return Colors[mode].semantic[semanticKey];
 }
 
 export function getCategorySemanticBg(mode: 'light' | 'dark', category: string): string {
-  const map: Record<string, keyof typeof SemanticBgLight> = {
-    alert: 'alert',
-    warning: 'warning',
-    help: 'help',
-    resources: 'resources',
-    'accessibility resources': 'accessibility',
-  };
-  const semanticKey = map[category] || 'help';
+  const semanticKey = CATEGORY_TO_SEMANTIC[category] || 'help';
   return Colors[mode].semanticBg[semanticKey];
 }
 

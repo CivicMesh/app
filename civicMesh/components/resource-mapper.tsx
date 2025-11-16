@@ -1,5 +1,5 @@
 import { StyleSheet, View, TouchableOpacity } from 'react-native';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -20,6 +20,8 @@ const CATEGORY_ICONS: Record<Post['category'], string> = {
 };
 
 const MAX_MINI_MAP_POSTS = 15;
+const MINI_MAP_LATITUDE_DELTA = 0.03;
+const MINI_MAP_LONGITUDE_DELTA = 0.03;
 
 type MapColorMode = 'light' | 'dark';
 
@@ -48,12 +50,15 @@ function MiniMapMarker({ post, mode }: { post: Post; mode: MapColorMode }) {
   );
 }
 
-function MiniMap({ style, posts }: { style?: any; posts: Post[] }) {
+function MiniMap({ style, posts, onOpenMap }: { style?: any; posts: Post[]; onOpenMap: () => void }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { userLocation, isLoading } = useLocation();
   const [initialRegion, setInitialRegion] = useState<Region | null>(null);
   const mode: MapColorMode = colorScheme === 'dark' ? 'dark' : 'light';
+  const [isGestureActive, setIsGestureActive] = useState(false);
+  const gestureTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const programmaticRegionRef = useRef(true);
 
   const postsToRender = useMemo(() => posts.slice(0, MAX_MINI_MAP_POSTS), [posts]);
 
@@ -70,11 +75,17 @@ function MiniMap({ style, posts }: { style?: any; posts: Post[] }) {
       return {
         latitude: userLocation.latitude,
         longitude: userLocation.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
+        latitudeDelta: MINI_MAP_LATITUDE_DELTA,
+        longitudeDelta: MINI_MAP_LONGITUDE_DELTA,
       };
     });
   }, [userLocation]);
+
+  useEffect(() => {
+    if (initialRegion) {
+      programmaticRegionRef.current = false;
+    }
+  }, [initialRegion]);
 
   useEffect(() => {
     if (initialRegion || userLocation || postsToRender.length === 0) {
@@ -85,10 +96,26 @@ function MiniMap({ style, posts }: { style?: any; posts: Post[] }) {
     setInitialRegion({
       latitude: firstPost.latitude,
       longitude: firstPost.longitude,
-      latitudeDelta: 0.08,
-      longitudeDelta: 0.08,
+      latitudeDelta: MINI_MAP_LATITUDE_DELTA,
+      longitudeDelta: MINI_MAP_LONGITUDE_DELTA,
     });
   }, [initialRegion, postsToRender, userLocation]);
+
+  useEffect(() => {
+    return () => {
+      if (gestureTimeoutRef.current) {
+        clearTimeout(gestureTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const markGestureActive = useCallback(() => {
+    setIsGestureActive(true);
+    if (gestureTimeoutRef.current) {
+      clearTimeout(gestureTimeoutRef.current);
+    }
+    gestureTimeoutRef.current = setTimeout(() => setIsGestureActive(false), 200);
+  }, []);
 
   // Show loading state
   if (isLoading || !initialRegion) {
@@ -108,6 +135,26 @@ function MiniMap({ style, posts }: { style?: any; posts: Post[] }) {
         rotateEnabled={false}
         pitchEnabled={false}
         showsUserLocation={true}
+        scrollEnabled
+        zoomEnabled
+        onRegionChange={(_, details) => {
+          if (programmaticRegionRef.current) {
+            return;
+          }
+          if (details?.isGesture) {
+            markGestureActive();
+          }
+        }}
+        onPanDrag={() => {
+          if (!programmaticRegionRef.current) {
+            markGestureActive();
+          }
+        }}
+        onPress={() => {
+          if (!isGestureActive) {
+            onOpenMap();
+          }
+        }}
       >
         {userLocation && (
           <Marker
@@ -146,13 +193,15 @@ export function ResourceMapper() {
           <MaterialIcons name="map" size={24} color={mapIconColor} />
         </TouchableOpacity>
       </ThemedView>
-      <TouchableOpacity
+      <View
         style={styles.mapContainer}
-        onPress={() => router.push('/map')}
         accessibilityRole="button"
-        accessibilityLabel="Open full map">
-        <MiniMap style={styles.map} posts={posts} />
-      </TouchableOpacity>
+        accessibilityLabel="Open full map"
+        accessibilityHint="Opens the full interactive map view"
+        onAccessibilityTap={() => router.push('/map')}
+        focusable>
+        <MiniMap style={styles.map} posts={posts} onOpenMap={() => router.push('/map')} />
+      </View>
     </ThemedView>
   );
 }
