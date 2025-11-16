@@ -18,6 +18,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, getCategorySemanticBg, getCategorySemanticColor } from '@/constants/theme';
 import { CATEGORIES } from '@/constants/categories';
 import { FilterScope, useFilters } from '@/contexts/filter-context';
+import { usePosts } from '@/contexts/posts-context';
 
 const PANEL_MAX_WIDTH = 360;
 
@@ -32,12 +33,41 @@ export function FilterPanel({ visible, onClose, scope }: FilterPanelProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const mode = colorScheme === 'dark' ? 'dark' : 'light';
-  const { hasActiveFilters, activeFiltersCount, clearFilters, toggleCategory, toggleSubcategory, isCategorySelected, isSubcategorySelected } = useFilters(scope);
+  const { posts } = usePosts();
+  const {
+    hasActiveFilters,
+    activeFiltersCount,
+    clearFilters,
+    toggleCategory,
+    toggleSubcategory,
+    isCategorySelected,
+    isSubcategorySelected,
+    selectedCategories,
+    selectedSubcategories,
+  } = useFilters(scope);
 
   const windowWidth = Dimensions.get('window').width;
   const panelWidth = useMemo(() => Math.min(windowWidth * 0.85, PANEL_MAX_WIDTH), [windowWidth]);
   const translateX = useRef(new Animated.Value(panelWidth)).current;
   const [modalVisible, setModalVisible] = useState(visible);
+
+  const filteredPostsCount = useMemo(() => {
+    const categorySet = new Set(selectedCategories);
+    const subcategorySet = new Set(
+      Object.values(selectedSubcategories).reduce<string[]>((acc, curr = []) => acc.concat(curr), [])
+    );
+
+    const hasCategoryFilters = categorySet.size > 0;
+    const hasSubcategoryFilters = subcategorySet.size > 0;
+
+    return posts.filter((post) => {
+      const categoryMatch = hasCategoryFilters ? categorySet.has(post.category) : true;
+      const subcategoryMatch = hasSubcategoryFilters
+        ? (post.subcategory ? subcategorySet.has(post.subcategory) : false)
+        : true;
+      return categoryMatch && subcategoryMatch;
+    }).length;
+  }, [posts, selectedCategories, selectedSubcategories]);
 
   useEffect(() => {
     if (visible) {
@@ -95,6 +125,11 @@ export function FilterPanel({ visible, onClose, scope }: FilterPanelProps) {
                   </ThemedText>
                   <ThemedText style={styles.subtitle}>
                     {hasActiveFilters ? `Active filters: ${activeFiltersCount}` : 'Showing all posts'}
+                  </ThemedText>
+                  <ThemedText style={styles.subtitle}>
+                    {filteredPostsCount === 0
+                      ? 'No posts match these filters'
+                      : `${filteredPostsCount} post${filteredPostsCount === 1 ? '' : 's'} visible`}
                   </ThemedText>
                 </View>
                 <View style={styles.headerActions}>

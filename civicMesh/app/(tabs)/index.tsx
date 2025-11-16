@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, BackHandler } from 'react-native';
+import { StyleSheet, View, BackHandler, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { ThemedView } from '@/components/themed-view';
@@ -8,23 +8,41 @@ import { ResourceMapper } from '@/components/resource-mapper';
 import { Feed } from '@/components/feed';
 import { MenuDrawer } from '@/components/menu-drawer';
 import { useAuth } from '@/contexts/auth-context';
-import { FilterPanel } from '@/components/filter-panel';
-import { useFilters } from '@/contexts/filter-context';
+import { usePosts } from '@/contexts/posts-context';
+import { useLocation } from '@/contexts/location-context';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
-  const [filtersVisible, setFiltersVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const { logout, user } = useAuth();
-  const { hasActiveFilters } = useFilters('feed');
+  const { refreshPosts } = usePosts();
+  const { refreshLocation } = useLocation();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
+  const fabIconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
 
   const handleMenuPress = () => {
     setMenuVisible(true);
   };
 
-  const handleFilterPress = () => {
-    setFiltersVisible(true);
-  };
+  const handleRefresh = useCallback(async () => {
+    if (refreshing) {
+      return;
+    }
+
+    setRefreshing(true);
+    try {
+      await Promise.all([refreshPosts(), refreshLocation()]);
+    } catch (error) {
+      console.error('Error refreshing home data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshLocation, refreshPosts, refreshing]);
 
   const handleSignOut = async () => {
     setMenuVisible(false);
@@ -50,14 +68,11 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <HomeHeader onMenuPress={handleMenuPress} onFilterPress={handleFilterPress} hasActiveFilters={hasActiveFilters} />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+      <HomeHeader onMenuPress={handleMenuPress} onRefresh={handleRefresh} isRefreshing={refreshing} />
+      <View style={styles.content}>
         <ResourceMapper />
         <Feed />
-      </ScrollView>
+      </View>
       <MenuDrawer
         visible={menuVisible}
         onClose={() => setMenuVisible(false)}
@@ -65,7 +80,15 @@ export default function HomeScreen() {
         userEmail={user?.email}
         userName={userName}
       />
-  <FilterPanel visible={filtersVisible} onClose={() => setFiltersVisible(false)} scope="feed" />
+      <TouchableOpacity
+        style={[styles.fab, { bottom: 24 + insets.bottom }]}
+        onPress={() => router.push('/post-for-help')}
+        accessibilityRole="button"
+        accessibilityLabel="Create a post"
+        activeOpacity={0.85}
+      >
+        <Ionicons name="add-circle" size={56} color={fabIconColor} />
+      </TouchableOpacity>
     </ThemedView>
   );
 }
@@ -74,10 +97,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
+  content: {
     flex: 1,
   },
-  scrollContent: {
-    paddingBottom: 16,
+  fab: {
+    position: 'absolute',
+    right: 24,
+    borderRadius: 40,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
 });

@@ -6,6 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors, getCategorySemanticColor, getCategorySemanticBg } from '@/constants/theme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { usePosts } from '@/contexts/posts-context';
 import { Post } from '@/services/api';
 import { useFilters } from '@/contexts/filter-context';
@@ -17,8 +18,6 @@ const CATEGORY_ICONS: Record<Post['category'], string> = {
   resources: 'inventory',
   'accessibility resources': 'accessible',
 };
-
-// Derive colors from semantic theme tokens instead of hardcoded values.
 
 function formatTimestamp(timestamp: string): string {
   const date = new Date(timestamp);
@@ -39,20 +38,25 @@ function formatTimestamp(timestamp: string): string {
   }
 }
 
-function FeedItem({ post }: { post: Post }) {
+type FeedItemProps = {
+  post: Post;
+  showDescription: boolean;
+};
+
+function FeedItem({ post, showDescription }: FeedItemProps) {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const mode = (colorScheme === 'dark' ? 'dark' : 'light');
+  const mode = colorScheme === 'dark' ? 'dark' : 'light';
   const categoryColor = getCategorySemanticColor(mode, post.category);
   const categoryBg = getCategorySemanticBg(mode, post.category);
   const categoryIcon = CATEGORY_ICONS[post.category];
 
   const onMyWayCount = post.onMyWayBy?.length || 0;
   const isResolved = !!post.resolvedBy;
-  const resolvedColor = colors.semantic.resources; // use resources semantic for resolved state
+  const resolvedColor = colors.semantic.resources;
   const resolvedBg = colors.semanticBg.resources;
-  const onMyWayColor = colors.semantic.help; // help semantic for on my way state
+  const onMyWayColor = colors.semantic.help;
   const onMyWayBg = colors.semanticBg.help;
 
   return (
@@ -69,7 +73,7 @@ function FeedItem({ post }: { post: Post }) {
       accessibilityRole="button"
       accessibilityLabel={`View details for ${post.title}`}>
       <View style={styles.feedItemHeader}>
-        <View style={[styles.feedItemIconContainer, { backgroundColor: categoryBg }] }>
+        <View style={[styles.feedItemIconContainer, { backgroundColor: categoryBg }]}>
           <MaterialIcons name={categoryIcon as any} size={20} color={categoryColor} />
         </View>
         <View style={styles.feedItemContent}>
@@ -77,29 +81,24 @@ function FeedItem({ post }: { post: Post }) {
             <ThemedText type="defaultSemiBold" style={styles.feedItemTitle}>
               {post.title}
             </ThemedText>
-            <View style={[styles.categoryBadge, { backgroundColor: categoryBg }]}>
-              <ThemedText style={[styles.categoryBadgeText, { color: categoryColor }]}>
-                {post.category}
-              </ThemedText>
-            </View>
-            {post.subcategory ? (
-              <View style={[styles.categoryBadge, { backgroundColor: categoryBg }]}>
-                <ThemedText style={[styles.categoryBadgeText, { color: categoryColor }]}>
-                  {post.subcategory}
-                </ThemedText>
-              </View>
-            ) : null}
             {isResolved ? (
-              <View style={[styles.statusBadge, { backgroundColor: resolvedBg }]}> 
+              <View style={[styles.statusBadge, { backgroundColor: resolvedBg }]}>
                 <ThemedText style={[styles.statusBadgeText, { color: resolvedColor }]}>Resolved</ThemedText>
               </View>
             ) : onMyWayCount > 0 ? (
-              <View style={[styles.statusBadge, { backgroundColor: onMyWayBg }]}> 
+              <View style={[styles.statusBadge, { backgroundColor: onMyWayBg }]}>
                 <ThemedText style={[styles.statusBadgeText, { color: onMyWayColor }]}>On My Way ({onMyWayCount})</ThemedText>
               </View>
             ) : null}
           </View>
-          <ThemedText style={styles.feedItemMessage}>{post.description}</ThemedText>
+          {post.subcategory ? (
+            <ThemedText style={[styles.feedItemSubcategory, { color: categoryColor }]}>
+              {post.subcategory}
+            </ThemedText>
+          ) : null}
+          {showDescription ? (
+            <ThemedText style={styles.feedItemMessage}>{post.description}</ThemedText>
+          ) : null}
           <ThemedText style={styles.feedItemTimestamp}>{formatTimestamp(post.timestamp || post.createdAt)}</ThemedText>
         </View>
       </View>
@@ -107,12 +106,18 @@ function FeedItem({ post }: { post: Post }) {
   );
 }
 
-export function Feed() {
+type FeedProps = {
+  hideHeader?: boolean;
+  showDescription?: boolean;
+};
+
+export function Feed({ hideHeader = false, showDescription = false }: FeedProps) {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { posts, isLoading } = usePosts();
   const { selectedCategories, selectedSubcategories, hasActiveFilters, clearFilters } = useFilters('feed');
+  const headerIconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
 
   const filteredPosts = useMemo(() => {
     if (!hasActiveFilters) {
@@ -127,10 +132,10 @@ export function Feed() {
     const hasCategoryFilters = categorySet.size > 0;
     const hasSubcategoryFilters = subcategorySet.size > 0;
 
-    return posts.filter((post) => {
-      const categoryMatch = hasCategoryFilters ? categorySet.has(post.category) : true;
+    return posts.filter((postItem) => {
+      const categoryMatch = hasCategoryFilters ? categorySet.has(postItem.category) : true;
       const subcategoryMatch = hasSubcategoryFilters
-        ? (post.subcategory ? subcategorySet.has(post.subcategory) : false)
+        ? (postItem.subcategory ? subcategorySet.has(postItem.subcategory) : false)
         : true;
       return categoryMatch && subcategoryMatch;
     });
@@ -141,12 +146,20 @@ export function Feed() {
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedView style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/active-feed')} accessibilityRole="button" accessibilityLabel="Open active feed">
-          <ThemedText type="subtitle">Active Feed</ThemedText>
-        </TouchableOpacity>
-        <MaterialIcons name="notifications" size={24} color={colors.tint} />
-      </ThemedView>
+      {!hideHeader && (
+        <ThemedView style={styles.header}>
+          <TouchableOpacity onPress={() => router.push('/active-feed')} accessibilityRole="button" accessibilityLabel="Open active feed">
+            <ThemedText type="subtitle">Active Feed</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/active-feed')}
+            accessibilityRole="button"
+            accessibilityLabel="Open active feed"
+            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+            <Ionicons name="reader-outline" size={26} color={headerIconColor} />
+          </TouchableOpacity>
+        </ThemedView>
+      )}
       <ScrollView
         style={styles.feedList}
         contentContainerStyle={styles.feedListContent}
@@ -177,7 +190,9 @@ export function Feed() {
             </TouchableOpacity>
           </View>
         ) : (
-          filteredPosts.map((post) => <FeedItem key={post.id} post={post} />)
+          filteredPosts.map((postItem) => (
+            <FeedItem key={postItem.id} post={postItem} showDescription={showDescription} />
+          ))
         )}
       </ScrollView>
     </ThemedView>
@@ -187,7 +202,7 @@ export function Feed() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',
@@ -232,11 +247,8 @@ const styles = StyleSheet.create({
   },
   feedItemTitle: {
     fontSize: 16,
-  },
-  feedItemMessage: {
-    fontSize: 14,
-    opacity: 0.8,
-    marginTop: 4,
+    flex: 1,
+    flexWrap: 'wrap',
   },
   feedItemTimestamp: {
     fontSize: 12,
@@ -245,19 +257,23 @@ const styles = StyleSheet.create({
   },
   feedItemTitleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    alignItems: 'flex-start',
+    gap: 12,
     marginBottom: 4,
   },
-  categoryBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  categoryBadgeText: {
-    fontSize: 10,
+  feedItemSubcategory: {
+    fontSize: 13,
     fontWeight: '600',
     textTransform: 'capitalize',
+    marginBottom: 2,
+    flexWrap: 'wrap',
+    flexShrink: 1,
+    alignSelf: 'flex-start',
+  },
+  feedItemMessage: {
+    fontSize: 14,
+    opacity: 0.85,
+    marginTop: 4,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -310,4 +326,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

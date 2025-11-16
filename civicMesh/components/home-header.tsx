@@ -1,24 +1,25 @@
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 
 type HomeHeaderProps = {
   onMenuPress?: () => void;
-  onFilterPress?: () => void;
-  hasActiveFilters?: boolean;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 };
 
 export function HomeHeader({
   onMenuPress,
-  onFilterPress,
-  hasActiveFilters,
+  onRefresh,
+  isRefreshing,
 }: HomeHeaderProps) {
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const colors = Colors[colorScheme ?? 'light'];
   const borderColor = colorScheme === 'dark' ? colors.border : colors.borderMuted;
+  const iconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
 
   return (
     <View
@@ -31,24 +32,30 @@ export function HomeHeader({
         },
       ]}>
       <TouchableOpacity
-        style={styles.menuButton}
+        style={styles.iconButton}
         onPress={onMenuPress}
         accessibilityLabel="Open menu"
         accessibilityRole="button">
-        <MaterialIcons name="menu" size={28} color={colors.icon} />
+        <Ionicons name="reorder-three" size={28} color={iconColor} />
       </TouchableOpacity>
       <View style={styles.headerSpacer} />
-      {onFilterPress ? (
+      {onRefresh ? (
         <TouchableOpacity
-          style={styles.filterButton}
-          onPress={onFilterPress}
-          accessibilityLabel="Open filters"
-          accessibilityRole="button">
-          <MaterialIcons name="filter-alt" size={24} color={hasActiveFilters ? colors.tint : colors.icon} />
-          {hasActiveFilters && <View style={[styles.filterDot, { backgroundColor: colors.tint }]} />}
+          style={styles.iconButton}
+          onPress={onRefresh}
+          accessibilityLabel="Refresh content"
+          accessibilityRole="button"
+          accessibilityState={{ busy: isRefreshing }}
+          disabled={isRefreshing}
+        >
+          {isRefreshing ? (
+            <ActivityIndicator size="small" color={iconColor} />
+          ) : (
+            <Ionicons name="reload" size={26} color={iconColor} />
+          )}
         </TouchableOpacity>
       ) : (
-        <View style={styles.menuButton} />
+        <View style={[styles.iconButton, styles.iconPlaceholder]} />
       )}
     </View>
   );
@@ -63,23 +70,18 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
   },
-  menuButton: {
-    padding: 8,
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconPlaceholder: {
+    backgroundColor: 'transparent',
   },
   headerSpacer: {
     flex: 1,
-  },
-  filterButton: {
-    padding: 8,
-    position: 'relative',
-  },
-  filterDot: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
 });
 

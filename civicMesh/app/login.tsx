@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Text } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { useState, useCallback } from 'react';
+import { StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Text, BackHandler } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/contexts/auth-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -16,6 +17,18 @@ export default function LoginScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        BackHandler.exitApp();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [])
+  );
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -116,11 +129,9 @@ export default function LoginScreen() {
 
           <ThemedView style={styles.signupLink}>
             <ThemedText>Don&apos;t have an account? </ThemedText>
-            <Link href="/signup" asChild>
-              <TouchableOpacity>
-                <ThemedText style={[styles.linkText, { color: colors.tint }]}>Sign Up</ThemedText>
-              </TouchableOpacity>
-            </Link>
+            <TouchableOpacity onPress={() => router.push('/signup')} accessibilityRole="button" accessibilityLabel="Go to sign up" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <ThemedText style={[styles.linkText, { color: colors.tint }]}>Sign Up</ThemedText>
+            </TouchableOpacity>
           </ThemedView>
         </ThemedView>
       </ThemedView>

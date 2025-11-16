@@ -1,10 +1,11 @@
-import { StyleSheet, Modal, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { StyleSheet, Modal, TouchableOpacity, TouchableWithoutFeedback, View, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { useThemePreference } from '@/contexts/theme-context';
 
 type MenuDrawerProps = {
   visible: boolean;
@@ -18,6 +19,11 @@ export function MenuDrawer({ visible, onClose, onSignOut, userEmail, userName }:
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const colors = Colors[colorScheme ?? 'light'];
+  const { colorScheme: appTheme, setTheme } = useThemePreference();
+  const isDarkMode = appTheme === 'dark';
+  const interactiveIconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
+  const switchActiveTrack = '#000000';
+  const switchThumbColor = isDarkMode ? '#FFFFFF' : '#000000';
 
   return (
     <Modal
@@ -73,10 +79,34 @@ export function MenuDrawer({ visible, onClose, onSignOut, userEmail, userName }:
                   style={[styles.menuItem, { borderBottomColor: colorScheme === 'dark' ? colors.border : colors.borderMuted }]}
                   onPress={onSignOut}
                   activeOpacity={0.7}>
-                  <MaterialIcons name="logout" size={24} color={colors.brand.primary} />
+                  <MaterialIcons name="logout" size={24} color={interactiveIconColor} />
                   <ThemedText style={styles.menuItemText}>Sign Out</ThemedText>
                   <MaterialIcons name="chevron-right" size={20} color={colors.icon} />
                 </TouchableOpacity>
+              </View>
+              <View
+                style={[
+                  styles.themeToggleContainer,
+                  { borderTopColor: colorScheme === 'dark' ? colors.border : colors.borderMuted },
+                ]}>
+                <View style={styles.themeToggleLabelGroup}>
+                  <MaterialIcons
+                    name={isDarkMode ? 'dark-mode' : 'light-mode'}
+                    size={22}
+                    color={colors.icon}
+                  />
+                  <ThemedText style={styles.themeToggleLabel}>
+                    {isDarkMode ? 'Dark Mode' : 'Light Mode'}
+                  </ThemedText>
+                </View>
+                <Switch
+                  value={isDarkMode}
+                  onValueChange={(value) => setTheme(value ? 'dark' : 'light')}
+                  trackColor={{ false: colors.borderMuted, true: switchActiveTrack }}
+                  thumbColor={switchThumbColor}
+                  ios_backgroundColor={colors.borderMuted}
+                  accessibilityLabel="Toggle dark mode"
+                />
               </View>
             </ThemedView>
           </TouchableWithoutFeedback>
@@ -146,6 +176,23 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     flex: 1,
+    fontSize: 16,
+  },
+  themeToggleContainer: {
+    borderTopWidth: 1,
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  themeToggleLabelGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  themeToggleLabel: {
     fontSize: 16,
   },
 });

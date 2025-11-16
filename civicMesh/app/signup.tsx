@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { useState, useCallback } from 'react';
+import { StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, BackHandler } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/contexts/auth-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function SignupScreen() {
   const [firstName, setFirstName] = useState('');
@@ -19,6 +20,18 @@ export default function SignupScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        BackHandler.exitApp();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [])
+  );
 
   const handleSignup = async () => {
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
@@ -195,11 +208,9 @@ export default function SignupScreen() {
 
             <ThemedView style={styles.loginLink}>
               <ThemedText>Already have an account? </ThemedText>
-              <Link href="/login" asChild>
-                <TouchableOpacity>
-                  <ThemedText style={[styles.linkText, { color: colors.tint }]}>Login</ThemedText>
-                </TouchableOpacity>
-              </Link>
+              <TouchableOpacity onPress={() => router.replace('/login')} accessibilityRole="button" accessibilityLabel="Go to login" hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                <ThemedText style={[styles.linkText, { color: colors.tint }]}>Login</ThemedText>
+              </TouchableOpacity>
             </ThemedView>
           </ThemedView>
         </ThemedView>

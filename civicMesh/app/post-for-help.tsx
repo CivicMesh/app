@@ -47,6 +47,9 @@ export default function PostForHelpScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const iconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
+  const accentColor = colorScheme === 'dark' ? colors.tint : '#000000';
+  const accentForeground = colorScheme === 'dark' ? '#000000' : '#FFFFFF';
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -341,7 +344,7 @@ export default function PostForHelpScreen() {
           onPress={handleBack}
           accessibilityLabel="Go back"
           accessibilityRole="button">
-          <MaterialIcons name="arrow-back" size={24} color={colors.icon} />
+          <MaterialIcons name="arrow-back" size={24} color={iconColor} />
         </TouchableOpacity>
       </View>
       <ScrollView
@@ -393,11 +396,11 @@ export default function PostForHelpScreen() {
                       {
                         backgroundColor:
                           category === cat.value
-                            ? colors.tint
+                            ? accentColor
                             : colorScheme === 'dark'
                               ? '#2a2a2a'
                               : '#f5f5f5',
-                        borderColor: category === cat.value ? colors.tint : colorScheme === 'dark' ? '#444' : '#ddd',
+                        borderColor: category === cat.value ? accentColor : colorScheme === 'dark' ? '#444' : '#ddd',
                       },
                     ]}
                     onPress={() => {
@@ -408,13 +411,13 @@ export default function PostForHelpScreen() {
                     <MaterialIcons
                       name={cat.icon as any}
                       size={20}
-                      color={category === cat.value ? (colorScheme === 'dark' ? '#000' : '#fff') : colors.text}
+                      color={category === cat.value ? accentForeground : colors.text}
                     />
                     <Text
                       style={[
                         styles.categoryButtonText,
                         {
-                          color: category === cat.value ? (colorScheme === 'dark' ? '#000' : '#fff') : colors.text,
+                          color: category === cat.value ? accentForeground : colors.text,
                         },
                       ]}>
                       {cat.label}
@@ -437,11 +440,11 @@ export default function PostForHelpScreen() {
                         {
                           backgroundColor:
                             subcategory === sub.id
-                              ? colors.tint
+                              ? accentColor
                               : colorScheme === 'dark'
                                 ? '#2a2a2a'
                                 : '#f5f5f5',
-                          borderColor: subcategory === sub.id ? colors.tint : colorScheme === 'dark' ? '#444' : '#ddd',
+                          borderColor: subcategory === sub.id ? accentColor : colorScheme === 'dark' ? '#444' : '#ddd',
                         },
                       ]}
                       onPress={() => setSubcategory(sub.id)}
@@ -452,13 +455,13 @@ export default function PostForHelpScreen() {
                           (CATEGORIES.find((c) => c.value === category)?.icon || 'label') as any
                         }
                         size={20}
-                        color={subcategory === sub.id ? (colorScheme === 'dark' ? '#000' : '#fff') : colors.text}
+                        color={subcategory === sub.id ? accentForeground : colors.text}
                       />
                       <Text
                         style={[
                           styles.categoryButtonText,
                           {
-                            color: subcategory === sub.id ? (colorScheme === 'dark' ? '#000' : '#fff') : colors.text,
+                            color: subcategory === sub.id ? accentForeground : colors.text,
                           },
                         ]}>
                         {sub.label}
@@ -499,22 +502,22 @@ export default function PostForHelpScreen() {
                 <View style={styles.mediaPreviewContainer}>
                   <Image source={{ uri: photoUri }} style={styles.photoPreview} />
                   <TouchableOpacity
-                    style={[styles.changeMediaButton, { backgroundColor: colors.tint }]}
+                    style={[styles.changeMediaButton, { backgroundColor: accentColor }]}
                     onPress={pickPhoto}
                     disabled={loading}>
-                    <MaterialIcons name="edit" size={16} color={colorScheme === 'dark' ? '#000' : '#fff'} />
-                    <Text style={[styles.changeMediaButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
+                    <MaterialIcons name="edit" size={16} color={accentForeground} />
+                    <Text style={[styles.changeMediaButtonText, { color: accentForeground }]}> 
                       Change Photo
                     </Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <TouchableOpacity
-                  style={[styles.mediaButton, { backgroundColor: colors.tint }]}
+                  style={[styles.mediaButton, { backgroundColor: accentColor }]}
                   onPress={pickPhoto}
                   disabled={loading}>
-                  <MaterialIcons name="add-a-photo" size={20} color={colorScheme === 'dark' ? '#000' : '#fff'} />
-                  <Text style={[styles.mediaButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
+                  <MaterialIcons name="add-a-photo" size={20} color={accentForeground} />
+                  <Text style={[styles.mediaButtonText, { color: accentForeground }]}> 
                     Add Photo
                   </Text>
                 </TouchableOpacity>
@@ -527,15 +530,15 @@ export default function PostForHelpScreen() {
               {videoUri ? (
                 <View style={styles.mediaPreviewContainer}>
                   <View style={styles.videoPreview}>
-                    <MaterialIcons name="videocam" size={48} color={colors.tint} />
+                    <MaterialIcons name="videocam" size={48} color={accentColor} />
                     <ThemedText style={styles.videoPreviewText}>Video selected</ThemedText>
                   </View>
                   <TouchableOpacity
-                    style={[styles.changeMediaButton, { backgroundColor: colors.tint }]}
+                    style={[styles.changeMediaButton, { backgroundColor: accentColor }]}
                     onPress={pickVideo}
                     disabled={loading}>
-                    <MaterialIcons name="edit" size={16} color={colorScheme === 'dark' ? '#000' : '#fff'} />
-                    <Text style={[styles.changeMediaButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
+                    <MaterialIcons name="edit" size={16} color={accentForeground} />
+                    <Text style={[styles.changeMediaButtonText, { color: accentForeground }]}> 
                       Change Video
                     </Text>
                   </TouchableOpacity>
@@ -558,27 +561,27 @@ export default function PostForHelpScreen() {
               <ThemedText style={styles.label}>Location</ThemedText>
               {locationLoading ? (
                 <View style={styles.locationStatus}>
-                  <ActivityIndicator size="small" color={colors.tint} />
+                  <ActivityIndicator size="small" color={accentColor} />
                   <ThemedText style={styles.locationText}>Getting your location...</ThemedText>
                 </View>
               ) : location ? (
                 <View style={styles.locationStatus}>
-                  <MaterialIcons name="location-on" size={20} color={colors.tint} />
+                  <MaterialIcons name="location-on" size={20} color={accentColor} />
                   <ThemedText style={styles.locationText}>
                     Location captured
                   </ThemedText>
                 </View>
               ) : (
                 <TouchableOpacity
-                  style={[styles.locationButton, { backgroundColor: colors.tint }]}
+                  style={[styles.locationButton, { backgroundColor: accentColor }]}
                   onPress={requestLocationPermission}
                   disabled={loading || locationLoading}>
                   {locationLoading ? (
-                    <ActivityIndicator size="small" color={colorScheme === 'dark' ? '#000' : '#fff'} />
+                    <ActivityIndicator size="small" color={accentForeground} />
                   ) : (
                     <>
-                      <MaterialIcons name="location-on" size={20} color={colorScheme === 'dark' ? '#000' : '#fff'} />
-                      <Text style={[styles.locationButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
+                      <MaterialIcons name="location-on" size={20} color={accentForeground} />
+                      <Text style={[styles.locationButtonText, { color: accentForeground }]}> 
                         Get Location
                       </Text>
                     </>
@@ -589,13 +592,13 @@ export default function PostForHelpScreen() {
 
             {/* Submit Button */}
             <TouchableOpacity
-              style={[styles.button, { backgroundColor: colors.tint }]}
+              style={[styles.button, { backgroundColor: accentColor }]}
               onPress={handleSubmit}
               disabled={loading || !location}>
               {loading ? (
-                <ActivityIndicator color={colorScheme === 'dark' ? '#000' : '#fff'} />
+                <ActivityIndicator color={accentForeground} />
               ) : (
-                <Text style={[styles.buttonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
+                <Text style={[styles.buttonText, { color: accentForeground }]}> 
                   Submit Post
                 </Text>
               )}

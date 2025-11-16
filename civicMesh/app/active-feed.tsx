@@ -17,6 +17,7 @@ export default function ActiveFeedScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const iconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
   const borderColor = colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
   const { hasActiveFilters } = useFilters('feed');
   const [filtersVisible, setFiltersVisible] = useState(false);
@@ -37,7 +38,7 @@ export default function ActiveFeedScreen() {
     <ThemedView style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top, backgroundColor: colors.background, borderBottomColor: borderColor }]}>
         <TouchableOpacity style={styles.headerButton} onPress={() => router.replace('/(tabs)')} accessibilityRole="button" accessibilityLabel="Go back">
-          <MaterialIcons name="arrow-back" size={24} color={colors.icon} />
+          <MaterialIcons name="arrow-back" size={24} color={iconColor} />
         </TouchableOpacity>
         <ThemedText type="subtitle">Active Feed</ThemedText>
         <TouchableOpacity
@@ -45,11 +46,11 @@ export default function ActiveFeedScreen() {
           onPress={() => setFiltersVisible(true)}
           accessibilityRole="button"
           accessibilityLabel="Open filters">
-          <MaterialIcons name="filter-alt" size={24} color={hasActiveFilters ? colors.tint : colors.icon} />
+          <MaterialIcons name="filter-alt" size={24} color={iconColor} />
           {hasActiveFilters && <View style={[styles.activeDot, { backgroundColor: colors.tint }]} />}
         </TouchableOpacity>
       </View>
-      <Feed />
+  <Feed hideHeader showDescription />
   <FilterPanel visible={filtersVisible} onClose={() => setFiltersVisible(false)} scope="feed" />
     </ThemedView>
   );
