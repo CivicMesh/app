@@ -18,7 +18,7 @@ CivicMesh transforms how communities respond to urgent situations by creating a 
 - Interactive map showing active posts in your area
 - Automatic geolocation for precise incident reporting
 - Filter by category (Alert, Warning, Help, Resources, Accessibility Resources)
-- Real-time updates as situations develop
+- Real-time updates as situations develop 
 
 #### 📱 **Quick Reporting**
 - Create posts in seconds with photos and location
