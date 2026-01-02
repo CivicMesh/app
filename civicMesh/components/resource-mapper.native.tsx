@@ -117,10 +117,9 @@ function MiniMap({ style, posts, onOpenMap }: { style?: any; posts: Post[]; onOp
     gestureTimeoutRef.current = setTimeout(() => setIsGestureActive(false), 200);
   }, []);
 
-  // Show loading state
   if (isLoading || !initialRegion) {
     return (
-      <View style={[style, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[style, { justifyContent: 'center', alignItems: 'center' }] }>
         <MaterialIcons name="location-searching" size={32} color={colors.icon} />
       </View>
     );
@@ -167,7 +166,6 @@ function MiniMap({ style, posts, onOpenMap }: { style?: any; posts: Post[]; onOp
           <MiniMapMarker key={post.id} post={post} mode={mode} />
         ))}
       </MapView>
-      {/* Dynamic Layer Overlay (always on, sits above map) */}
       <View pointerEvents="none" style={styles.dynamicLayer} />
     </View>
   );
@@ -242,4 +240,3 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
-

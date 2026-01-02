@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Text, BackHandler } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Text, BackHandler, Image, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/auth-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useFocusEffect } from '@react-navigation/native';
+
+const LOGO_SOURCE = require('../assets/images/icon.png');
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -60,10 +62,13 @@ export default function LoginScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ThemedView style={styles.content}>
-        <ThemedText type="title" style={styles.title}>
-          Welcome Back
-        </ThemedText>
-        <ThemedText style={styles.subtitle}>Sign in to continue</ThemedText>
+        <View style={styles.hero}>
+          <View style={styles.logoWrapper}>
+            <Image source={LOGO_SOURCE} style={styles.logo} resizeMode="contain" />
+          </View>
+          <ThemedText type="title" style={styles.brandName}>Civic Mesh</ThemedText>
+          <ThemedText style={styles.subtitle}>Sign in to continue</ThemedText>
+        </View>
 
         {error ? (
           <ThemedView style={[styles.errorContainer, { backgroundColor: '#ffebee' }]}>
@@ -145,15 +150,35 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
     paddingHorizontal: 24,
+    justifyContent: 'center',
   },
-  title: {
-    marginBottom: 8,
-    textAlign: 'center',
+  hero: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logoWrapper: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
+  },
+  brandName: {
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    fontSize: 22,
+    lineHeight: 28,
+    marginBottom: 10,
   },
   subtitle: {
-    marginBottom: 32,
+    marginBottom: 20,
     textAlign: 'center',
     opacity: 0.7,
   },
